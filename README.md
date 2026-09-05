@@ -6,7 +6,44 @@ This repository implements Morgan's Intelligent Control (MIC) using the fast-tra
 
 Sprint 01 is **accepted as sufficient to proceed with deferred validation**. Sprint 02's durable kernel is implemented: domain state, audit events and transactional outbox events persist in PostgreSQL, while pg-boss dispatch and consumer-side deduplication provide restart-safe asynchronous work. Successful Build Auto artifacts, a genuine blocked payload and the bmad-loop result contract remain deferred to the combined execution/lifecycle milestone. See `docs/phase0-validation.md` and `docs/kernel-architecture.md`.
 
-## Commands
+## Playable local checkpoint
+
+Install dependencies once:
+
+```sh
+cd /home/michael/projects/machine_setup
+npm ci
+```
+
+Start the persistent project-local PostgreSQL server in terminal 1:
+
+```sh
+cd /home/michael/projects/machine_setup
+npm run db:start
+```
+
+It stores data under `.runtime/postgres` and listens only on `127.0.0.1:54329`. In terminal 2, build the browser UI and start MIC:
+
+```sh
+cd /home/michael/projects/machine_setup
+npm run web:build
+DATABASE_URL=postgres://postgres:mic@127.0.0.1:54329/postgres npm run dev:api
+```
+
+Open:
+
+- MIC PWA: <http://127.0.0.1:3100/>
+- Interactive Swagger API: <http://127.0.0.1:3100/docs/>
+- Health: <http://127.0.0.1:3100/health>
+- Combined system status: <http://127.0.0.1:3100/system/status>
+
+For frontend development, leave the API running and use `npm run dev:web` in terminal 3, then open <http://127.0.0.1:5173/>. Vite proxies MIC API requests to port 3100.
+
+Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, OpenCode, the configured model, and a project with an attached absolute path to a clean local Git repository. Planning/execution requests can run for a long time; their run appears in the UI and can be cancelled from the work-item view.
+
+Stop MIC and PostgreSQL with `Ctrl-C` in their respective terminals. The next `npm run db:start` reuses the same data.
+
+## Development checks
 
 ```sh
 npm ci

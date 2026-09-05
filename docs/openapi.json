@@ -1,29 +1,47 @@
 {
-  "openapi": "3.1.0",
-  "info": { "title": "MIC Kernel API", "version": "0.2.0" },
+  "openapi": "3.0.3",
+  "info": { "title": "MIC Playable Checkpoint API", "version": "0.6.0" },
   "servers": [{ "url": "http://127.0.0.1:3100" }],
-  "paths": {
-    "/health": { "get": { "responses": { "200": { "description": "Service is healthy" } } } },
-    "/projects": { "post": { "$ref": "#/components/x-create/project" } },
-    "/projects/{id}": { "get": { "$ref": "#/components/x-get" } },
-    "/projects/{id}/repositories": { "post": { "$ref": "#/components/x-create/repository" } },
-    "/repositories/{id}": { "get": { "$ref": "#/components/x-get" } },
-    "/work-items": { "post": { "$ref": "#/components/x-create/workItem" } },
-    "/work-items/{id}": { "get": { "$ref": "#/components/x-get" } },
-    "/runs": { "post": { "$ref": "#/components/x-create/run" } },
-    "/runs/{id}": { "get": { "$ref": "#/components/x-get" } },
-    "/questions": { "post": { "$ref": "#/components/x-create/question" } },
-    "/questions/{id}": { "get": { "$ref": "#/components/x-get" } }
-  },
   "components": {
-    "parameters": { "idempotencyKey": { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } } },
-    "x-get": { "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Entity" }, "404": { "description": "Not found" } } },
-    "x-create": {
-      "project": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } }, "responses": { "201": { "description": "Project" } } },
-      "repository": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }, { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true }, "responses": { "201": { "description": "Repository" } } },
-      "workItem": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Work item" } } },
-      "run": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Run" } } },
-      "question": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Question" } } }
+    "parameters": { "id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, "key": { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } } },
+    "schemas": {
+      "Project": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } },
+      "Repository": { "type": "object", "required": ["path"], "properties": { "path": { "type": "string" }, "role": { "type": "string" }, "baseBranch": { "type": "string", "default": "main" } } },
+      "WorkItem": { "type": "object", "required": ["projectId", "title", "intent"], "properties": { "projectId": { "type": "string" }, "title": { "type": "string" }, "intent": { "type": "string" }, "priority": { "type": "integer" } } },
+      "Approval": { "type": "object", "required": ["artifactHash", "approver"], "properties": { "artifactHash": { "type": "string" }, "approver": { "type": "string", "default": "Michael" } } },
+      "Answer": { "type": "object", "required": ["answer", "actor"], "properties": { "answer": { "type": "string" }, "actor": { "type": "string", "default": "Michael" } } },
+      "Object": { "type": "object", "additionalProperties": true }
     }
+  },
+  "paths": {
+    "/health": { "get": { "tags": ["System"], "summary": "Liveness", "responses": { "200": { "description": "Healthy" } } } },
+    "/system/status": { "get": { "tags": ["System"], "summary": "Combined status", "responses": { "200": { "description": "Status" } } } },
+    "/resources": { "get": { "tags": ["System"], "summary": "Resource status", "responses": { "200": { "description": "Resources" } } } },
+    "/scheduler": { "get": { "tags": ["System"], "summary": "Queue status", "responses": { "200": { "description": "Queue" } } } },
+    "/projects": { "get": { "tags": ["Projects"], "responses": { "200": { "description": "List" } } }, "post": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Project" } } } }, "responses": { "201": { "description": "Created" } } } },
+    "/projects/{id}": { "get": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Project" } } } },
+    "/projects/{id}/repositories": { "post": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }, { "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Repository" } } } }, "responses": { "201": { "description": "Created" } } } },
+    "/repositories": { "get": { "tags": ["Projects"], "responses": { "200": { "description": "List" } } } },
+    "/repositories/{id}": { "get": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Repository" } } } },
+    "/work-items": { "get": { "tags": ["Work"], "responses": { "200": { "description": "List" } } }, "post": { "tags": ["Work"], "parameters": [{ "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkItem" } } } }, "responses": { "201": { "description": "Created" } } } },
+    "/work-items/{id}": { "get": { "tags": ["Work"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Work item" } } } },
+    "/work-items/{id}/detail": { "get": { "tags": ["Work"], "summary": "Lifecycle and provenance", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Detail" } } } },
+    "/work-items/{id}/discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Object" } } } }, "responses": { "200": { "description": "Advanced" } } } },
+    "/work-items/{id}/planning": { "post": { "tags": ["Lifecycle"], "summary": "Start BMAD planning", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Result" } } } },
+    "/work-items/{id}/planning-approval": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Approval" } } } }, "responses": { "200": { "description": "Approved" } } } },
+    "/work-items/{id}/technical-discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Advanced" } } } },
+    "/work-items/{id}/implementation": { "post": { "tags": ["Lifecycle"], "summary": "Start Build Auto", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Result" } } } },
+    "/work-items/{id}/implementation-approval": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Approval" } } } }, "responses": { "200": { "description": "Approved" } } } },
+    "/questions": { "get": { "tags": ["Questions"], "responses": { "200": { "description": "List" } } } },
+    "/questions/{id}/answer": { "post": { "tags": ["Questions"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Answer" } } } }, "responses": { "200": { "description": "Resumed" } } } },
+    "/runs": { "get": { "tags": ["Runs"], "responses": { "200": { "description": "List" } } } },
+    "/runs/{id}": { "get": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Run" } } } },
+    "/runs/{id}/cancel": { "post": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Cancelled" } } } },
+    "/runs/{id}/evidence": { "get": { "tags": ["Evidence"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Evidence" } } } },
+    "/runs/{id}/logs": { "get": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Captured stdout and stderr" } } } },
+    "/runs/{id}/gates": { "get": { "tags": ["Evidence"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Gates" } } } },
+    "/artifacts/{type}/{id}/content": { "get": { "tags": ["Evidence"], "parameters": [{ "name": "type", "in": "path", "required": true, "schema": { "type": "string", "enum": ["planning", "implementation"] } }, { "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Artifact text" } } } },
+    "/approvals": { "get": { "tags": ["Lifecycle"], "responses": { "200": { "description": "List" } } } },
+    "/evidence": { "post": { "tags": ["Evidence"], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Object" } } } }, "responses": { "201": { "description": "Created" } } } }
   }
 }

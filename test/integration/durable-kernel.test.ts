@@ -70,6 +70,13 @@ describe('durable MIC kernel', () => {
     const repository = (await firstApp.inject({ method: 'POST', url: `/projects/${project.id}/repositories`, headers: { 'idempotency-key': 'acceptance-repository' }, payload: { path: '/tmp/acceptance.git' } })).json<{ id: string }>();
     const run = (await firstApp.inject({ method: 'POST', url: '/runs', headers: { 'idempotency-key': 'acceptance-run' }, payload: { workItemId: workItem.id, kind: 'planning', baselineRevision: 'abc123' } })).json<{ id: string }>();
     const question = (await firstApp.inject({ method: 'POST', url: '/questions', headers: { 'idempotency-key': 'acceptance-question' }, payload: { workItemId: workItem.id, runId: run.id, question: 'Proceed?' } })).json<{ id: string }>();
+    expect((await firstApp.inject({ method: 'GET', url: '/system/status' })).statusCode).toBe(200);
+    expect((await firstApp.inject({ method: 'GET', url: '/projects' })).json()).toHaveLength(1);
+    expect((await firstApp.inject({ method: 'GET', url: `/work-items/${workItem.id}/detail` })).json()).toMatchObject({ item: { id: workItem.id } });
+    expect((await firstApp.inject({ method: 'GET', url: `/runs/${run.id}/logs` })).json()).toMatchObject({ runId: run.id, stdout: '', stderr: '' });
+    expect((await firstApp.inject({ method: 'GET', url: `/runs/${run.id}/gates` })).json()).toMatchObject({ passed: false });
+    expect((await firstApp.inject({ method: 'GET', url: '/resources' })).statusCode).toBe(200);
+    expect((await firstApp.inject({ method: 'GET', url: '/scheduler' })).statusCode).toBe(200);
 
     await firstApp.close();
     await first.pool.end();

@@ -9,6 +9,7 @@ type State = 'INTAKE' | 'PLANNING_GRADE' | 'AWAITING_PLANNING_APPROVAL' | 'TECHN
 export interface LifecycleExecutor {
   execute(input: { mode: 'planning' | 'implementation'; runId: string; workItemId: string; intent: string }): Promise<RunResult>;
   finalize?(workItemId: string, result: RunResult): Promise<void>;
+  cancel?(runId: string): boolean;
 }
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -46,7 +47,9 @@ export class LifecycleService {
     const item = await this.state(workItemId);
     if (item.state !== 'PLANNING_GRADE') throw new Error(`Invalid transition: expected PLANNING_GRADE, found ${item.state}`);
     const run = await this.kernel.createRun({ workItemId, kind: 'planning', status: 'RUNNING' }, `${workItemId}:planning`);
-    const result = await this.executor.execute({ mode: 'planning', runId: run.id, workItemId, intent: item.intent });
+    let result: RunResult;
+    try { result = await this.executor.execute({ mode: 'planning', runId: run.id, workItemId, intent: item.intent }); }
+    catch (error) { await this.db.update(runs).set({ status: 'FAILED', result: { error: String(error) }, updatedAt: new Date() }).where(eq(runs.id, run.id)); throw error; }
     await this.db.update(runs).set({ status: result.status.toUpperCase(), result, baselineRevision: result.repositoryRevisions.baseline, resultRevision: result.repositoryRevisions.result, updatedAt: new Date() }).where(eq(runs.id, run.id));
     if (result.status === 'blocked') return this.block(workItemId, run.id, 'PLANNING_GRADE', result);
     if (result.status !== 'done') throw new Error(`Planning failed: ${result.summary}`);
@@ -72,7 +75,9 @@ export class LifecycleService {
     const item = await this.state(workItemId);
     if (item.state !== 'IMPLEMENTATION_GRADE') throw new Error(`Invalid transition: expected IMPLEMENTATION_GRADE, found ${item.state}`);
     const run = await this.kernel.createRun({ workItemId, kind: 'implementation', status: 'RUNNING' }, `${workItemId}:implementation`);
-    const result = await this.executor.execute({ mode: 'implementation', runId: run.id, workItemId, intent: item.intent });
+    let result: RunResult;
+    try { result = await this.executor.execute({ mode: 'implementation', runId: run.id, workItemId, intent: item.intent }); }
+    catch (error) { await this.db.update(runs).set({ status: 'FAILED', result: { error: String(error) }, updatedAt: new Date() }).where(eq(runs.id, run.id)); throw error; }
     await this.db.update(runs).set({ status: result.status.toUpperCase(), result, baselineRevision: result.repositoryRevisions.baseline, resultRevision: result.repositoryRevisions.result, updatedAt: new Date() }).where(eq(runs.id, run.id));
     if (result.status === 'blocked') return this.block(workItemId, run.id, 'IMPLEMENTATION_GRADE', result);
     if (result.status !== 'done') throw new Error(`Implementation failed: ${result.summary}`);

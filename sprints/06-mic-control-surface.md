@@ -1,5 +1,7 @@
 # Sprint 06 – MIC Control Surface (PWA)
 
+> **Playable checkpoint (2026-09-05): implemented.** The first local browser UI covers system status, project/repository setup, work items, lifecycle actions and timeline, approvals, questions, runs/logs/artifacts/cancel, and queue/resource state. Offline behavior, authentication and visual refinement remain intentionally deferred.
+
 **Goal**: Deliver a minimal Progressive Web App that exposes the MIC state machine, projects, work items, approvals, questions, runs, evidence, and queue status. The UI consumes the API built in earlier sprints and receives live updates via Server‑Sent Events.
 
 ### Exit Criteria

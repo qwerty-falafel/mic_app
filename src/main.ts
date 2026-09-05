@@ -14,7 +14,10 @@ const timer = setInterval(() => runtime.dispatchBatch().catch(error => console.e
 const executor = new ProjectExecutionService(db, process.env.MIC_MODEL ?? 'llama.cpp/Qwen3.8-27b-q8');
 const app = createApp(db, executor);
 
+let stopping = false;
 async function shutdown() {
+  if (stopping) return;
+  stopping = true;
   clearInterval(timer);
   await app.close();
   await runtime.stop();
@@ -23,3 +26,4 @@ async function shutdown() {
 process.once('SIGTERM', () => void shutdown().finally(() => process.exit(0)));
 process.once('SIGINT', () => void shutdown().finally(() => process.exit(0)));
 await app.listen({ host: config.host, port: config.port });
+console.log(`MIC ready: http://${config.host}:${config.port} (API docs: http://${config.host}:${config.port}/docs/)`);

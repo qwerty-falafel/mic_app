@@ -44,4 +44,5 @@ export class ProjectExecutionService implements LifecycleExecutor {
     await exec('git', ['-C', raw.repository, 'merge', '--ff-only', result.repositoryRevisions.result]);
     await this.worktrees.remove({ repository: raw.repository, path: raw.worktree, branch: raw.branch, baseline: raw.baseline });
   }
+  cancel(runId: string) { return this.adapter.cancel(runId); }
 }
