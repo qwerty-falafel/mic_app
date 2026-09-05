@@ -4,7 +4,7 @@ This repository implements Morgan's Intelligent Control (MIC) using the fast-tra
 
 ## Current status
 
-Sprint 01 is **accepted as sufficient to proceed with deferred validation**. The local router, OpenCode transport, BMAD configuration and project skills are operational. Successful Build Auto artifacts, a genuine blocked payload and the bmad-loop result contract remain unvalidated; they will be captured while implementing the execution path that uses them. See `docs/phase0-validation.md`.
+Sprint 01 is **accepted as sufficient to proceed with deferred validation**. Sprint 02's durable kernel is implemented: domain state, audit events and transactional outbox events persist in PostgreSQL, while pg-boss dispatch and consumer-side deduplication provide restart-safe asynchronous work. Successful Build Auto artifacts, a genuine blocked payload and the bmad-loop result contract remain deferred to the combined execution/lifecycle milestone. See `docs/phase0-validation.md` and `docs/kernel-architecture.md`.
 
 ## Commands
 
@@ -13,6 +13,7 @@ npm ci
 npm run build
 npm test
 npm run test:coverage
+npm run test:integration
 
 # Discovery only. Expected to exit nonzero because execution is not run.
 npm run phase0

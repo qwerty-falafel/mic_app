@@ -1,5 +1,7 @@
 # Sprint 02 – Durable MIC Kernel
 
+> **Fast-track result (2026-09-05): implemented.** The critical integration test creates all core entity types, restarts the application/pool, reads the persisted state, processes committed outbox work with pg-boss, deliberately redelivers an event, and verifies one domain row, audit row, outbox row and consumer side effect. The former coverage percentage and exhaustive crash-matrix requirements are superseded by the fast-track acceptance rule.
+
 **Goal**: Establish the persistent core of MIC – a PostgreSQL‑backed domain model, an **outbox dispatcher**, and a minimal command/query API. This sprint also introduces the durable entities required by later execution work (runs and questions).
 
 ### Exit Criteria

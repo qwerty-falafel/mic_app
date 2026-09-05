@@ -20,3 +20,6 @@ _bmad/custom/*.user.toml
 
 # Isolated validation workspaces (evidence is retained in test/fixtures/phase0)
 .phase0/
+
+# Project-local PostgreSQL runtime used by integration tests
+.runtime/

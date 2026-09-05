@@ -6,19 +6,36 @@
   "scripts": {
     "build": "tsc",
     "phase0": "tsx scripts/phase0-validate.ts",
-    "dev": "tsx scripts/phase0-validate.ts",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/src/main.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
     "test": "vitest run",
+    "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "fastify": "5.12.3",
+    "drizzle-orm": "0.45.2",
+    "pg": "8.23.0",
+    "pg-boss": "12.30.0",
+    "zod": "4.5.4",
     "yaml": "2.9.0"
   },
   "devDependencies": {
     "@types/node": "22.18.0",
+    "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "5.0.0",
+    "drizzle-kit": "0.31.10",
+    "embedded-postgres": "18.4.0-beta.17",
     "tsx": "4.20.5",
     "typescript": "5.9.2",
     "vitest": "5.0.0"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   }
 }

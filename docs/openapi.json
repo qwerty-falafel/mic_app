@@ -1,0 +1,29 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "MIC Kernel API", "version": "0.2.0" },
+  "servers": [{ "url": "http://127.0.0.1:3100" }],
+  "paths": {
+    "/health": { "get": { "responses": { "200": { "description": "Service is healthy" } } } },
+    "/projects": { "post": { "$ref": "#/components/x-create/project" } },
+    "/projects/{id}": { "get": { "$ref": "#/components/x-get" } },
+    "/projects/{id}/repositories": { "post": { "$ref": "#/components/x-create/repository" } },
+    "/repositories/{id}": { "get": { "$ref": "#/components/x-get" } },
+    "/work-items": { "post": { "$ref": "#/components/x-create/workItem" } },
+    "/work-items/{id}": { "get": { "$ref": "#/components/x-get" } },
+    "/runs": { "post": { "$ref": "#/components/x-create/run" } },
+    "/runs/{id}": { "get": { "$ref": "#/components/x-get" } },
+    "/questions": { "post": { "$ref": "#/components/x-create/question" } },
+    "/questions/{id}": { "get": { "$ref": "#/components/x-get" } }
+  },
+  "components": {
+    "parameters": { "idempotencyKey": { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } } },
+    "x-get": { "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Entity" }, "404": { "description": "Not found" } } },
+    "x-create": {
+      "project": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } }, "responses": { "201": { "description": "Project" } } },
+      "repository": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }, { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true }, "responses": { "201": { "description": "Repository" } } },
+      "workItem": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Work item" } } },
+      "run": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Run" } } },
+      "question": { "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }], "requestBody": { "required": true }, "responses": { "201": { "description": "Question" } } }
+    }
+  }
+}
