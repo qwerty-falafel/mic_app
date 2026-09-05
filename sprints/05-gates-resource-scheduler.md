@@ -1,5 +1,7 @@
 # Sprint 05 – Gates + Resource Scheduler
 
+> **Fast-track scope:** v1 requires revision-bound `BUILD_PASS` and `TESTS_PASS` evidence plus explicit model and memory admission. Broader policy-engine work remains deferred.
+
 **Goal**: Add deterministic evidence‑based gates, bind them to repository revisions, and implement a resource‑aware scheduler that admits runs only when the model capability policy and system health thresholds are satisfied.
 
 ### Exit Criteria

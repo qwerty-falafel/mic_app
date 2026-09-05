@@ -15,6 +15,13 @@
       "when": 1788642203598,
       "tag": "0001_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788642603540,
+      "tag": "0002_gates",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { bigint, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
@@ -65,6 +65,11 @@ export const approvals = pgTable('approvals', {
   id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }), phase: text('phase').notNull(), artifactHash: text('artifact_hash').notNull(),
   artifactType: text('artifact_type').notNull(), repositoryRevision: text('repository_revision').notNull(), approver: text('approver').notNull(), createdAt: createdAt(),
 }, table => [uniqueIndex('approval_phase_artifact_idx').on(table.workItemId, table.phase, table.artifactHash)]);
+
+export const evidenceRecords = pgTable('evidence_records', {
+  id: text('id').primaryKey(), runId: text('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }), repositoryId: text('repository_id').notNull().references(() => repositories.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), revision: text('revision').notNull(), passed: boolean('passed').notNull(), data: jsonb('data').notNull(), createdAt: createdAt(),
+}, table => [uniqueIndex('evidence_run_kind_revision_idx').on(table.runId, table.kind, table.revision)]);
 
 export type Project = typeof projects.$inferSelect;
 export type Repository = typeof repositories.$inferSelect;
