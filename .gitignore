@@ -1,0 +1,34 @@
+.bmad-loop/runs/
+.bmad-loop/cache/
+.bmad-loop/policy.toml
+_bmad/render/
+
+# Node / generated output
+node_modules/
+dist/
+coverage/
+*.log
+
+# Local secrets / environment
+.env
+.env.*
+!.env.example
+
+# BMAD personal configuration
+_bmad/config.user.toml
+_bmad/custom/*.user.toml
+
+# Node / generated output
+node_modules/
+dist/
+coverage/
+*.log
+
+# Local secrets / environment
+.env
+.env.*
+!.env.example
+
+# BMAD personal configuration
+_bmad/config.user.toml
+_bmad/custom/*.user.toml
