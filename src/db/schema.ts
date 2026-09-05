@@ -43,6 +43,29 @@ export const processedEvents = pgTable('processed_events', {
   outboxEventId: text('outbox_event_id').primaryKey().references(() => outboxEvents.id, { onDelete: 'cascade' }), topic: text('topic').notNull(), payload: jsonb('payload').notNull(), processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const discoveryRecords = pgTable('discovery_records', {
+  id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }).unique(), data: jsonb('data').notNull(), createdAt: createdAt(),
+});
+
+export const planningArtifacts = pgTable('planning_artifacts', {
+  id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }), runId: text('run_id').references(() => runs.id, { onDelete: 'set null' }),
+  path: text('path').notNull(), contentHash: text('content_hash').notNull(), baselineRevision: text('baseline_revision').notNull(), resultRevision: text('result_revision').notNull(), createdAt: createdAt(),
+}, table => [uniqueIndex('planning_artifact_revision_idx').on(table.workItemId, table.contentHash)]);
+
+export const technicalRecords = pgTable('technical_records', {
+  id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }).unique(), data: jsonb('data').notNull(), createdAt: createdAt(),
+});
+
+export const implementationArtifacts = pgTable('implementation_artifacts', {
+  id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }), runId: text('run_id').references(() => runs.id, { onDelete: 'set null' }),
+  path: text('path').notNull(), contentHash: text('content_hash').notNull(), baselineRevision: text('baseline_revision').notNull(), resultRevision: text('result_revision').notNull(), createdAt: createdAt(),
+}, table => [uniqueIndex('implementation_artifact_revision_idx').on(table.workItemId, table.contentHash)]);
+
+export const approvals = pgTable('approvals', {
+  id: text('id').primaryKey(), workItemId: text('work_item_id').notNull().references(() => workItems.id, { onDelete: 'cascade' }), phase: text('phase').notNull(), artifactHash: text('artifact_hash').notNull(),
+  artifactType: text('artifact_type').notNull(), repositoryRevision: text('repository_revision').notNull(), approver: text('approver').notNull(), createdAt: createdAt(),
+}, table => [uniqueIndex('approval_phase_artifact_idx').on(table.workItemId, table.phase, table.artifactHash)]);
+
 export type Project = typeof projects.$inferSelect;
 export type Repository = typeof repositories.$inferSelect;
 export type WorkItem = typeof workItems.$inferSelect;

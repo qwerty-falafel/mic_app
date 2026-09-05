@@ -1,5 +1,7 @@
 # Sprint 03 – Harness + Execution Foundation
 
+> **Fast-track status (2026-09-05): combined with Sprint 04.** Worktree isolation, cancellable/recoverable OpenCode execution and durable BMAD-to-`RunResult` mapping are implemented and tested. A live successful Build Auto contract remains deferred until the first approved real execution; the adapter deliberately does not infer success from exit code alone.
+
 **Goal**: Build the isolated work‑tree/branch manager, define the OpenCode harness adapter, and implement the BMAD *Direct* execution adapter that produces a **RunResult**. Capture the contracts discovered in Sprint 01 as test fixtures.
 
 ### Exit Criteria

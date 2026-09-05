@@ -1,5 +1,7 @@
 # Sprint 04 – Development Lifecycle + BMAD Protocol
 
+> **Fast-track status (2026-09-05): core vertical slice implemented with a deterministic execution test.** Revision-bound artifacts, both approvals, guarded transitions, blocked questions and final worktree fast-forward are wired. Live local-model Build Auto validation remains an observed-contract checkpoint rather than a separate Phase-0 blocker.
+
 **Goal**: Implement the full MIC lifecycle that mirrors the planning‑grade epic, including **DISCOVERY**, **PLANNING_GRADE**, **PLANNING_APPROVAL**, **TECHNICAL_DISCOVERY**, **IMPLEMENTATION_GRADE**, and **IMPLEMENTATION_APPROVAL**. Wire these stages to the execution adapters built in Sprint 03 and persist revision‑bound artifacts, approvals, and questions.
 
 ### Exit Criteria

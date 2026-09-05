@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from './db/client.js';
 import { Kernel } from './kernel.js';
+import { LifecycleService, type LifecycleExecutor } from './services/lifecycle.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().min(1) });
@@ -11,13 +12,15 @@ const workItemInput = z.object({ projectId: id, title: z.string().min(1), intent
 const runInput = z.object({ workItemId: id, kind: z.string().min(1), model: z.string().optional(), status: z.string().optional(), baselineRevision: z.string().optional() });
 const questionInput = z.object({ workItemId: id, runId: id.optional(), question: z.string().min(1), context: z.record(z.string(), z.unknown()).optional(), resumeRef: z.record(z.string(), z.unknown()).optional() });
 
-export function createApp(db: Database) {
+export function createApp(db: Database, executor?: LifecycleExecutor) {
   const app = Fastify({ logger: false });
   const kernel = new Kernel(db);
+  const lifecycle = executor ? new LifecycleService(db, executor) : undefined;
   const key = (request: { headers: Record<string, unknown> }) => typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : randomUUID();
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'validation_error', issues: error.issues });
     if ((error as any).code === '23503') return reply.code(409).send({ error: 'missing_reference' });
+    if (error instanceof Error && error.message.startsWith('Invalid transition')) return reply.code(409).send({ error: 'invalid_transition', message: error.message });
     return reply.send(error);
   });
   app.get('/health', async () => ({ status: 'ok' }));
@@ -36,5 +39,13 @@ export function createApp(db: Database) {
       return row ? reply.send(row) : reply.code(404).send({ error: 'not_found' });
     });
   }
+  const requireLifecycle = () => { if (!lifecycle) throw new Error('Lifecycle executor is not configured'); return lifecycle; };
+  app.post('/work-items/:id/discovery', async request => { const { id: entityId } = z.object({ id }).parse(request.params); return requireLifecycle().runDiscovery(entityId, z.record(z.string(), z.unknown()).parse(request.body)); });
+  app.post('/work-items/:id/planning', async request => { const { id: entityId } = z.object({ id }).parse(request.params); return requireLifecycle().runPlanning(entityId); });
+  app.post('/work-items/:id/planning-approval', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ artifactHash: id, approver: id }).parse(request.body); return requireLifecycle().recordPlanningApproval(entityId, body.artifactHash, body.approver); });
+  app.post('/work-items/:id/technical-discovery', async request => { const { id: entityId } = z.object({ id }).parse(request.params); return requireLifecycle().runTechnicalDiscovery(entityId, z.record(z.string(), z.unknown()).parse(request.body)); });
+  app.post('/work-items/:id/implementation', async request => { const { id: entityId } = z.object({ id }).parse(request.params); return requireLifecycle().runImplementation(entityId); });
+  app.post('/work-items/:id/implementation-approval', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ artifactHash: id, approver: id }).parse(request.body); return requireLifecycle().recordImplementationApproval(entityId, body.artifactHash, body.approver); });
+  app.post('/questions/:id/answer', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ answer: z.string().min(1), actor: id }).parse(request.body); return requireLifecycle().answerQuestion(entityId, body.answer, body.actor); });
   return app;
 }

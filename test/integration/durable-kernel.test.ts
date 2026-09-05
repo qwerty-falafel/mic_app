@@ -7,8 +7,10 @@ import { eq, sql } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
-import { auditEvents, outboxEvents, processedEvents, workItems } from '../../src/db/schema.js';
+import { approvals, auditEvents, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, questions, workItems } from '../../src/db/schema.js';
 import { OutboxRuntime } from '../../src/dispatcher.js';
+import { Kernel } from '../../src/kernel.js';
+import { LifecycleService } from '../../src/services/lifecycle.js';
 
 async function freePort() {
   return new Promise<number>((resolvePort, reject) => {
@@ -110,4 +112,49 @@ describe('durable MIC kernel', () => {
       await second.pool.end();
     }
   }, 60_000);
+
+  it('moves an intent through revision-bound planning and implementation approvals to DONE', async () => {
+    const connection = createDatabase(databaseUrl);
+    const kernel = new Kernel(connection.db);
+    const project = await kernel.createProject({ name: 'Lifecycle project' }, 'lifecycle-project');
+    const execute = async ({ mode, runId }: { mode: 'planning' | 'implementation'; runId: string }) => ({
+      runId, status: 'done' as const, artifactRefs: [`artifacts/${mode}.md`], evidenceRefs: mode === 'implementation' ? ['evidence/tests.log'] : [],
+      repositoryRevisions: { baseline: '1111111', result: mode === 'planning' ? '2222222' : '3333333' }, summary: `${mode} complete`, rawAdapterState: {},
+    });
+    const lifecycle = new LifecycleService(connection.db, { execute });
+    try {
+      const item = await lifecycle.intake(project.id, 'Build the vertical slice', 'Vertical slice', 'lifecycle-work-item');
+      await lifecycle.runDiscovery(item.id, { repositories: [project.id] });
+      const planned = await lifecycle.runPlanning(item.id);
+      if (!('artifactHash' in planned)) throw new Error('Planning unexpectedly blocked');
+      await lifecycle.recordPlanningApproval(item.id, planned.artifactHash, 'Michael');
+      await lifecycle.runTechnicalDiscovery(item.id, { risks: [] });
+      const implemented = await lifecycle.runImplementation(item.id);
+      if (!('artifactHash' in implemented)) throw new Error('Implementation unexpectedly blocked');
+      const done = await lifecycle.recordImplementationApproval(item.id, implemented.artifactHash, 'Michael');
+
+      expect(done.state).toBe('DONE');
+      expect(await connection.db.select().from(planningArtifacts).where(eq(planningArtifacts.workItemId, item.id))).toHaveLength(1);
+      expect(await connection.db.select().from(implementationArtifacts).where(eq(implementationArtifacts.workItemId, item.id))).toHaveLength(1);
+      expect(await connection.db.select().from(approvals).where(eq(approvals.workItemId, item.id))).toHaveLength(2);
+      await expect(lifecycle.runDiscovery(item.id, {})).rejects.toThrow('Invalid transition');
+    } finally { await connection.pool.end(); }
+  }, 30_000);
+
+  it('persists a blocked adapter result as a resumable question', async () => {
+    const connection = createDatabase(databaseUrl);
+    const kernel = new Kernel(connection.db);
+    const project = await kernel.createProject({ name: 'Blocked project' }, 'blocked-project');
+    const lifecycle = new LifecycleService(connection.db, { execute: async ({ runId }) => ({ runId, status: 'blocked', artifactRefs: [], evidenceRefs: [], repositoryRevisions: { baseline: 'aaaaaaa', result: 'aaaaaaa' }, blockingCondition: { code: 'no_subagents', message: 'Build Auto requires subagents' }, summary: 'blocked', rawAdapterState: {} }) });
+    try {
+      const item = await lifecycle.intake(project.id, 'Exercise blocked routing', 'Blocked route', 'blocked-work-item');
+      await lifecycle.runDiscovery(item.id, {});
+      const result = await lifecycle.runPlanning(item.id);
+      expect('blocked' in result && result.blocked).toBe(true);
+      const [question] = await connection.db.select().from(questions).where(eq(questions.workItemId, item.id));
+      expect(question).toMatchObject({ status: 'OPEN', question: 'Build Auto requires subagents' });
+      const resumed = await lifecycle.answerQuestion(question!.id, 'Use the supported path', 'Michael');
+      expect(resumed.state).toBe('PLANNING_GRADE');
+    } finally { await connection.pool.end(); }
+  }, 30_000);
 });
