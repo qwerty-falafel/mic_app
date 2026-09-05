@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "phase0": "tsx scripts/phase0-validate.ts",
-    "dev": "tsx watch src/main.ts",
+    "predev": "npm run web:build",
+    "dev": "tsx scripts/dev.ts",
     "dev:api": "tsx watch src/main.ts",
     "dev:web": "vite --config frontend/vite.config.ts",
     "db:start": "tsx scripts/dev-postgres.ts",

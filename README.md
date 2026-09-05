@@ -15,19 +15,26 @@ cd /home/michael/projects/machine_setup
 npm ci
 ```
 
-Start the persistent project-local PostgreSQL server in terminal 1:
+The normal development command starts the persistent project-local PostgreSQL server, runs migrations, builds the PWA and starts MIC:
 
 ```sh
 cd /home/michael/projects/machine_setup
-npm run db:start
+npm run dev
 ```
 
-It stores data under `.runtime/postgres` and listens only on `127.0.0.1:54329`. In terminal 2, build the browser UI and start MIC:
+It stores data under `.runtime/postgres`; PostgreSQL listens only on `127.0.0.1:54329` and MIC listens only on `127.0.0.1:3100`.
+
+For separate database and API processes, use two terminals:
 
 ```sh
+# terminal 1
+cd /home/michael/projects/machine_setup
+npm run db:start
+
+# terminal 2
 cd /home/michael/projects/machine_setup
 npm run web:build
-DATABASE_URL=postgres://postgres:mic@127.0.0.1:54329/postgres npm run dev:api
+npm run dev:api
 ```
 
 Open:
@@ -41,7 +48,7 @@ For frontend development, leave the API running and use `npm run dev:web` in ter
 
 Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, OpenCode, the configured model, and a project with an attached absolute path to a clean local Git repository. Planning/execution requests can run for a long time; their run appears in the UI and can be cancelled from the work-item view.
 
-Stop MIC and PostgreSQL with `Ctrl-C` in their respective terminals. The next `npm run db:start` reuses the same data.
+Stop the combined development server with one `Ctrl-C`. The next `npm run dev` reuses the same data.
 
 ## Development checks
 
