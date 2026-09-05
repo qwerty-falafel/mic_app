@@ -1,0 +1,35 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--dir",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/unattended",
+    "--pure",
+    "--format",
+    "json",
+    "--model",
+    "llama.cpp/Qwen3.8-27b-q8",
+    "--auto",
+    "Use bmad-build-auto for this approved pilot: create arithmetic.js exporting subtract(a,b) for finite numbers, with node:test tests for positive, negative and zero values. ES modules, no dependencies, no UI. Execute the full unattended workflow including verification and review."
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/unattended",
+  "exitCode": null,
+  "signal": "SIGTERM",
+  "timedOut": false,
+  "error": "Validation interrupted",
+  "durationMs": 3240.5373139999574,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 5,
+    "minAvailableMiB": 68324.8828125,
+    "peakRssMiB": 5152.3359375,
+    "peakGpuResidentMiB": 42870.6015625,
+    "peakCombinedFraction": 0.38379724405485044,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 14.125350795135638,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

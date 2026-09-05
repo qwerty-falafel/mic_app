@@ -18,17 +18,5 @@ coverage/
 _bmad/config.user.toml
 _bmad/custom/*.user.toml
 
-# Node / generated output
-node_modules/
-dist/
-coverage/
-*.log
-
-# Local secrets / environment
-.env
-.env.*
-!.env.example
-
-# BMAD personal configuration
-_bmad/config.user.toml
-_bmad/custom/*.user.toml
+# Isolated validation workspaces (evidence is retained in test/fixtures/phase0)
+.phase0/

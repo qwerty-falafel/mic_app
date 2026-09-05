@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "/usr/bin/node",
+    "--input-type=module",
+    "-e",
+    "import assert from 'node:assert/strict'; import {multiply,divide} from './arithmetic.js'; assert.equal(multiply(3,-2),-6); assert.equal(multiply(4,0),0); assert.equal(divide(6,2),3); assert.throws(()=>divide(3,0),RangeError);"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop",
+  "exitCode": 1,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 146.98289700003807,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 69786.3515625,
+    "peakRssMiB": 3655.3828125,
+    "peakGpuResidentMiB": 42871.19921875,
+    "peakCombinedFraction": 0.37183843572429687,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 7.847533632286996,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

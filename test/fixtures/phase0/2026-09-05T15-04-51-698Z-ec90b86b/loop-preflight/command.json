@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "bmad-loop",
+    "validate",
+    "--project",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-05T15-04-51-698Z-ec90b86b/loop",
+    "--spec",
+    "pilot-spec",
+    "--json"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-05T15-04-51-698Z-ec90b86b/loop",
+  "exitCode": 1,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 847.2875719999429,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 90646.19140625,
+    "peakRssMiB": 1567.08984375,
+    "peakGpuResidentMiB": 24289.578125,
+    "peakCombinedFraction": 0.20664537455351575,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 10.526315789473683,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

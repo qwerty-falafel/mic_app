@@ -1,0 +1,6 @@
+{"ts": 1788623791.6807487, "kind": "run-start", "run_id": "20260905-165631-19cb", "source": "stories", "adapter_dev": "opencode-http", "adapter_review": "opencode-http"}
+{"ts": 1788623791.6883168, "kind": "stories-validated", "count": 2, "spec_folder": "pilot-spec"}
+{"ts": 1788623791.6885028, "kind": "story-start", "story_key": "1"}
+{"ts": 1788623791.70118, "kind": "session-start", "task_id": "1-dev-1", "role": "dev", "adapter": "opencode-http", "model": "llama.cpp/Qwen3.8-27b-q8", "story_key": "1", "prompt": "/bmad-build-auto Spec folder: pilot-spec. Story id: 1.", "log_task": "1-dev-1", "log_pos": 0}
+{"ts": 1788623798.4872158, "kind": "session-end", "task_id": "1-dev-1", "status": "aborted", "error": "RunStopped", "log_task": "1-dev-1", "log_pos": 99}
+{"ts": 1788623798.5258667, "kind": "run-stop", "log_task": "1-dev-1", "log_pos": 99}

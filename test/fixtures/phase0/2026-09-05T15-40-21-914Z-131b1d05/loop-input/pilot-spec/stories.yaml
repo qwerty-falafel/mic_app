@@ -1,0 +1,6 @@
+- id: "1"
+  title: Multiply finite numbers
+  description: Export multiply(a,b) from arithmetic.js and test positive, negative and zero cases.
+- id: "2"
+  title: Divide finite numbers
+  description: Add divide(a,b) to arithmetic.js; throw RangeError for zero divisor, with node:test coverage. Preserve multiply.

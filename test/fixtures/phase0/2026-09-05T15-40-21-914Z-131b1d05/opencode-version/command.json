@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "opencode",
+    "--version"
+  ],
+  "cwd": "/home/michael/projects/machine_setup",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 318.87640999999996,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 91259.64453125,
+    "peakRssMiB": 1568.80859375,
+    "peakGpuResidentMiB": 24290.1328125,
+    "peakCombinedFraction": 0.20666354376790483,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 5.284147557328012,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

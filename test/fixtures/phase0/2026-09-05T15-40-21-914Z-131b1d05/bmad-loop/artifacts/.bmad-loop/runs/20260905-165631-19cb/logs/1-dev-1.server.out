@@ -1,0 +1,30 @@
+timestamp=2026-09-05T15:56:32.580Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/config.json
+timestamp=2026-09-05T15:56:32.582Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/opencode.json
+timestamp=2026-09-05T15:56:32.583Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/opencode.jsonc
+opencode server listening on http://127.0.0.1:57327
+timestamp=2026-09-05T15:56:32.827Z level=INFO run=367553dc message="creating instance" directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop
+timestamp=2026-09-05T15:56:32.828Z level=INFO run=367553dc message=fromDirectory directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop
+timestamp=2026-09-05T15:56:32.868Z level=INFO run=367553dc message=bootstrapping directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop
+timestamp=2026-09-05T15:56:32.874Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/config.json
+timestamp=2026-09-05T15:56:32.874Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/opencode.json
+timestamp=2026-09-05T15:56:32.875Z level=INFO run=367553dc message=loading path=/home/michael/.config/opencode/opencode.jsonc
+timestamp=2026-09-05T15:56:32.876Z level=INFO run=367553dc message=loading path=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop/opencode.json
+timestamp=2026-09-05T15:56:32.912Z level=INFO run=367553dc message=loading path=/home/michael/.opencode/opencode.json
+timestamp=2026-09-05T15:56:32.912Z level=INFO run=367553dc message=loading path=/home/michael/.opencode/opencode.jsonc
+timestamp=2026-09-05T15:56:32.939Z level=INFO run=367553dc message="all LSPs are disabled"
+timestamp=2026-09-05T15:56:32.941Z level=INFO run=367553dc message="all formatters are disabled"
+timestamp=2026-09-05T15:56:32.941Z level=INFO run=367553dc message=init
+timestamp=2026-09-05T15:56:32.947Z level=INFO run=367553dc message=created id=ses_f8db6d4cdffegapFDiu2eIDtC6 slug=calm-harbor version=1.18.27 projectID=a2c5d82e28e2ac832805700c1f4a2db456ad716e directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop path="" workspaceID=undefined parentID=undefined title=1-dev-1 agent=undefined model=undefined metadata=undefined permission=undefined cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1788623792947 time.updated=1788623792947
+timestamp=2026-09-05T15:56:32.982Z level=INFO run=367553dc message="event connected"
+timestamp=2026-09-05T15:56:33.344Z level=INFO run=367553dc message=loop session.id=ses_f8db6d4cdffegapFDiu2eIDtC6 step=0
+timestamp=2026-09-05T15:56:33.386Z level=INFO run=367553dc message=initialized
+timestamp=2026-09-05T15:56:33.402Z level=INFO run=367553dc message=tracking hash=96c38b147f7808311c4036968f543fb54b178179 cwd=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop git=/home/michael/.local/share/opencode/snapshot/a2c5d82e28e2ac832805700c1f4a2db456ad716e/27f006f3ae40ad6ef620d8b3e5a76963deaa6684
+timestamp=2026-09-05T15:56:33.409Z level=INFO run=367553dc message="shell tool using shell" shell=/bin/bash
+timestamp=2026-09-05T15:56:33.426Z level=INFO run=367553dc message=init count=92
+timestamp=2026-09-05T15:56:33.543Z level=INFO run=367553dc message="watcher backend" directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop platform=linux backend=inotify
+timestamp=2026-09-05T15:56:33.550Z level=INFO run=367553dc message="project copy refresh started" projectID=a2c5d82e28e2ac832805700c1f4a2db456ad716e
+timestamp=2026-09-05T15:56:34.014Z level=INFO run=367553dc message="project copy refresh done" projectID=a2c5d82e28e2ac832805700c1f4a2db456ad716e updated=[] removed=[]
+timestamp=2026-09-05T15:56:34.032Z level=INFO run=367553dc message="booting location services" directory=/home/michael/projects/machine_setup/.phase0/2026-09-05T15-40-21-914Z-131b1d05/loop workspaceID=undefined
+timestamp=2026-09-05T15:56:34.047Z level=INFO run=367553dc message=process session.id=ses_f8db6d4cdffegapFDiu2eIDtC6 messageID=msg_072492cc2001i20eM6Th7yMfiH
+timestamp=2026-09-05T15:56:34.050Z level=INFO run=367553dc message=stream providerID=llama.cpp modelID=Qwen3.8-27b-q8 session.id=ses_f8db6d4cdffegapFDiu2eIDtC6 small=false agent=build mode=primary
+timestamp=2026-09-05T15:56:34.060Z level=INFO run=367553dc message="llm runtime selected" llm.runtime=ai-sdk llm.provider=llama.cpp llm.model=Qwen3.8-27b-q8
