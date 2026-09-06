@@ -73,7 +73,10 @@ export class WorkflowSessionService {
       workspace = lease.path;
       await this.db.update(workstreams).set({ workspacePath: lease.path, branch: lease.branch, baselineRevision: lease.baseline, updatedAt: new Date() }).where(eq(workstreams.id, stream.id));
       try { await access(resolve(workspace, '_bmad')); }
-      catch { await cp(sharedBmadRoot, resolve(workspace, '_bmad'), { recursive: true }); await writeFile(resolve(workspace, '_bmad/config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository.path))}\nuser_name = "Michael"\ncommunication_language = "English"\ndocument_output_language = "English"\n\n[modules.bmm]\nuser_skill_level = "intermediate"\n`); }
+      catch {
+        await cp(sharedBmadRoot, resolve(workspace, '_bmad'), { recursive: true });
+        await writeFile(resolve(workspace, '_bmad/config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository.path))}\nuser_name = "Michael"\ncommunication_language = "English"\ndocument_output_language = "English"\noutput_folder = ${JSON.stringify(resolve(workspace, '_bmad-output'))}\n\n[modules.bmm]\nuser_skill_level = "intermediate"\nplanning_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/planning-artifacts'))}\nimplementation_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/implementation-artifacts'))}\nproject_knowledge = ${JSON.stringify(resolve(workspace, 'docs'))}\n`);
+      }
     }
     const [row] = await this.db.transaction(async tx => {
       const [created] = await tx.insert(workflowSessions).values({ id: sessionId, workstreamId: stream.id, definitionId: definition.id, skill: input.skill, action: input.action, args: input.args ?? {}, prompt: input.prompt, status: 'QUEUED', rawState: { workspace } }).returning();

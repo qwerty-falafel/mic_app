@@ -4,7 +4,7 @@ import { basename, dirname, relative, resolve, sep } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parse as parseYaml } from 'yaml';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { artifactLinks, artifactRevisions, auditEvents, reviewDecisions, workflowSessions, workstreams } from '../db/schema.js';
 
@@ -56,7 +56,7 @@ export class ArtifactService {
       if (parsed.status && !statuses.has(parsed.status)) issues.push(`Unrecognized status: ${parsed.status}`);
       if (parsed.type === 'spec' && !pathSet.has(`${dirname(path)}/.memlog.md`)) issues.push('SPEC.md requires an adjacent .memlog.md');
       if (parsed.type === 'memlog') {
-        const [prior] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
+        const [prior] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path), or(isNull(artifactRevisions.status), ne(artifactRevisions.status, 'quarantined')))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
         if (prior && !content.startsWith(prior.content)) issues.push('Historical memlog content was modified; revisions must append');
       }
       if (parsed.type === 'story-inventory') {
