@@ -182,5 +182,9 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/work-items/:id/implementation-approval', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ artifactHash: id, approver: id }).parse(request.body); return requireLifecycle().recordImplementationApproval(entityId, body.artifactHash, body.approver); });
   app.post('/work-items/:id/pause', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ reason: z.string().trim().min(1), actor: id }).parse(request.body); return requireLifecycle().pause(entityId, body.reason, body.actor); });
   app.post('/questions/:id/answer', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ answer: z.string().min(1), actor: id }).parse(request.body); return requireLifecycle().answerQuestion(entityId, body.answer, body.actor); });
+  app.setNotFoundHandler((request, reply) => {
+    if (request.method === 'GET' && existsSync(frontend) && String(request.headers.accept ?? '').includes('text/html')) return reply.sendFile('index.html');
+    return reply.code(404).send({ error: 'not_found' });
+  });
   return app;
 }
