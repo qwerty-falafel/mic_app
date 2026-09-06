@@ -1,10 +1,12 @@
 # MIC system
 
-This repository implements Morgan's Intelligent Control (MIC) using the fast-track milestones recorded under `sprints/`.
+This repository implements Morgan's Intelligent Control (MIC). The active roadmap is the [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md); Sprints 01–07 remain the foundation record.
 
 ## Current status
 
-Sprint 01 is **accepted as sufficient to proceed with deferred validation**. Sprint 02's durable kernel is implemented: domain state, audit events and transactional outbox events persist in PostgreSQL, while pg-boss dispatch and consumer-side deduplication provide restart-safe asynchronous work. Successful Build Auto artifacts, a genuine blocked payload and the bmad-loop result contract remain deferred to the combined execution/lifecycle milestone. See `docs/phase0-validation.md` and `docs/kernel-architecture.md`.
+Sprints 01–07 produced the durable kernel, Git worktree isolation, OpenCode transport, resource checks and first playable browser checkpoint. Real use showed that the fixed lifecycle reduces BMAD to one `bmad-spec` run, an empty technical-discovery transition and one whole-intent Build Auto run. That path is superseded and must not be used for implementation work.
+
+The active [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) begins with Sprint 08. It rebuilds MIC around discovered BMAD skills, durable interactive sessions, native artifacts and adaptive development paths. The existing TTS work remains a paused validation candidate until the final Sprint 14.
 
 ## Playable local checkpoint
 
