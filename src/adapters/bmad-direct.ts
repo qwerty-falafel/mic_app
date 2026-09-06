@@ -32,7 +32,7 @@ export class BmadDirectAdapter {
   async execute(input: { runId: string; worktree: string; baseline: string; model: string; mode: 'planning' | 'implementation'; intent: string; timeoutMs?: number }): Promise<RunResult> {
     const before = new Set(await files(input.worktree));
     const skill = input.mode === 'planning' ? 'bmad-spec' : 'bmad-build-auto';
-    this.harness.dispatch({ runId: input.runId, cwd: input.worktree, model: input.model, timeoutMs: input.timeoutMs, prompt: `Use ${skill} in headless mode. ${input.intent}` });
+    this.harness.dispatch({ runId: input.runId, cwd: input.worktree, model: input.model, command: skill, timeoutMs: input.timeoutMs, prompt: input.intent });
     const observed = await this.harness.observe(input.runId, true);
     const after = await files(input.worktree);
     const artifactRefs = after.filter(path => !before.has(path));

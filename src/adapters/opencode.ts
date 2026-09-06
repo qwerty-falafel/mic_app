@@ -17,7 +17,9 @@ export class OpenCodeAdapter {
 
   dispatch(request: ExecutionRequest) {
     if (this.runs.has(request.runId)) throw new Error(`Run already exists: ${request.runId}`);
-    const args = ['run', '--dir', request.cwd, '--pure', '--format', 'json', '--model', request.model, '--auto', request.prompt];
+    const args = ['run', '--dir', request.cwd, '--pure', '--format', 'json', '--model', request.model, '--auto'];
+    if (request.command) args.push('--command', request.command);
+    args.push(request.prompt);
     const statePath = resolve(request.cwd, '.mic/runs', `${request.runId}.json`);
     mkdirSync(resolve(statePath, '..'), { recursive: true });
     const env = {

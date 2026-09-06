@@ -22,6 +22,7 @@ export interface ExecutionRequest {
   runId: string;
   cwd: string;
   model: string;
+  command?: string;
   prompt: string;
   timeoutMs?: number;
 }

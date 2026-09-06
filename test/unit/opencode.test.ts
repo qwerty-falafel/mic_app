@@ -36,4 +36,17 @@ describe('OpenCodeAdapter', () => {
     const recovered = await new OpenCodeAdapter().recover('cancel-run', root);
     expect(recovered).toMatchObject({ runId: 'cancel-run', status: 'cancelled', signal: 'SIGTERM' });
   });
+
+  it('invokes a named OpenCode command with the supplied prompt as arguments', async () => {
+    root = await mkdtemp(resolve(tmpdir(), 'mic-opencode-command-'));
+    const executable = resolve(root, 'opencode');
+    await writeFile(executable, '#!/bin/sh\nprintf "%s\\n" "$@"\n');
+    await chmod(executable, 0o755);
+    process.env.PATH = `${root}${delimiter}${originalPath}`;
+    const adapter = new OpenCodeAdapter();
+    adapter.dispatch({ runId: 'command-run', cwd: root, model: 'test/model', command: 'bmad-spec', prompt: 'feature intent' });
+    const observation = await adapter.observe('command-run', true);
+    expect(observation.status).toBe('done');
+    expect(observation.stdout.trim().split('\n')).toEqual(expect.arrayContaining(['--command', 'bmad-spec', 'feature intent']));
+  });
 });

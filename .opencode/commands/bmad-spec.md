@@ -3,3 +3,7 @@ description: "Condense any input — an idea, brief, PRD, transcript, or mixed n
 ---
 
 @skills/bmad-spec
+
+Run the skill now in headless mode. Treat the following as the complete source input. Write its canonical `SPEC.md`, `.memlog.md`, and any required companion artifacts to disk and return their paths. Do not substitute a prose response for the files.
+
+$ARGUMENTS
