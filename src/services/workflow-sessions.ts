@@ -30,7 +30,7 @@ export function awaitsInput(skill: string, content: string, artifactRefs: string
 }
 
 export function preserveControlState(persisted: string | undefined, observed: string) {
-  return persisted === 'PAUSED' ? 'PAUSED' : persisted === 'CANCELLED' ? 'CANCELLED' : observed;
+  return persisted && ['PAUSED', 'CANCELLED', 'INTERRUPTED'].includes(persisted) ? persisted : observed;
 }
 
 export class WorkflowSessionService {
@@ -180,6 +180,17 @@ export class WorkflowSessionService {
   async recoverActive() {
     const active = await this.db.select().from(workflowSessions).where(inArray(workflowSessions.status, ['QUEUED', 'RUNNING']));
     for (const session of active) await this.db.update(workflowSessions).set({ status: 'INTERRUPTED', updatedAt: new Date() }).where(eq(workflowSessions.id, session.id));
+    return active.length;
+  }
+
+  async interruptActive() {
+    const active = await this.db.select().from(workflowSessions).where(inArray(workflowSessions.status, ['QUEUED', 'RUNNING', 'RESOURCE_WAITING']));
+    for (const session of active) {
+      const turns = await this.turns(session.id);
+      await this.db.update(workflowSessions).set({ status: 'INTERRUPTED', updatedAt: new Date() }).where(eq(workflowSessions.id, session.id));
+      if (session.status === 'RUNNING') this.runner.cancel(`${session.id}-${turns.length}`);
+      this.publish(session.id, { type: 'status', status: 'INTERRUPTED' });
+    }
     return active.length;
   }
 }

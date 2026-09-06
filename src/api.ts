@@ -44,6 +44,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   const artifacts = new ArtifactService(db);
   const stories = new StoryDeliveryService(db);
   void sessions.recoverActive();
+  app.addHook('onClose', async () => { await sessions.interruptActive(); });
   const key = (request: { headers: Record<string, unknown> }) => typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : randomUUID();
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'validation_error', issues: error.issues });

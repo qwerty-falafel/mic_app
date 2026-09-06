@@ -20,6 +20,7 @@ describe('durable workflow conversation contracts', () => {
   it('does not let the SIGTERM observation overwrite an intentional pause', () => {
     expect(preserveControlState('PAUSED', 'CANCELLED')).toBe('PAUSED');
     expect(preserveControlState('CANCELLED', 'FAILED')).toBe('CANCELLED');
+    expect(preserveControlState('INTERRUPTED', 'CANCELLED')).toBe('INTERRUPTED');
     expect(preserveControlState('RUNNING', 'FINISHED')).toBe('FINISHED');
   });
 });
