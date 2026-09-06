@@ -6,7 +6,7 @@ This repository implements Morgan's Intelligent Control (MIC). The active roadma
 
 Sprints 01–07 produced the durable kernel, Git worktree isolation, OpenCode transport, resource checks and first browser checkpoint. Real use showed that its fixed lifecycle reduced BMAD to one `bmad-spec` run, an empty technical-discovery transition and one whole-intent Build Auto run. That legacy path remains queryable as history and is fail-closed for new implementation work.
 
-Sprints 08–13 of the [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) add discovered BMAD operations, durable multi-turn sessions, immutable artifact revisions, feedback and review, adaptive workstream paths, one-story delivery and explicit fast-forward integration. Sprint 14 uses the preserved TTS feature as the real platform validation. The observed BMAD transport and artifact behavior is recorded in [the contract observatory](docs/bmad-contract-observatory.md).
+Sprints 08–13 of the [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) add discovered BMAD operations, durable multi-turn sessions, immutable artifact revisions, feedback and review, adaptive workstream paths, one-story delivery and explicit fast-forward integration. The Sprint 14 TTS rehearsal exposed serious journey and information-architecture failures, so implementation is paused at its valid planning artifact while Sprints 15–22 deliver the [Guided Product Delivery UX epic](sprints/epic-guided-product-delivery-ux.md). The supporting Scrum, Lean, Agile, and BMAD model is recorded in [the UX research note](docs/guided-product-delivery-ux-research.md).
 
 ## Playable local checkpoint
 
