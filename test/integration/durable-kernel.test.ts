@@ -214,9 +214,14 @@ describe('durable MIC kernel', () => {
       writeFileSync(resolve(folder, 'SPEC.md'), '---\nstatus: ready-for-dev\n---\n# Pilot\nApproved details\n');
       writeFileSync(resolve(folder, '.memlog.md'), '# Rewritten decisions\n- Different history\n');
       const indexed = await service.index(stream!.id);
-      expect(indexed.invalid).toBe(1);
+      expect(indexed.invalid).toBe(2);
       await expect(service.review(first!.id, { kind: 'accepted', actor: 'Michael' })).rejects.toThrow('latest artifact revision');
-      expect((await service.list(stream!.id)).filter(row => row.path.endsWith('.memlog.md')).some(row => row.status === 'quarantined')).toBe(true);
+      const revisions = await service.list(stream!.id);
+      expect(revisions.filter(row => row.path.endsWith('.memlog.md')).some(row => row.status === 'quarantined')).toBe(true);
+      const invalidSpec = revisions.find(row => row.type === 'spec' && row.status === 'quarantined');
+      expect((invalidSpec?.metadata as any)?.issues).toContain('Adjacent .memlog.md revision is quarantined');
+      await expect(service.review(invalidSpec!.id, { kind: 'accepted', actor: 'Michael' })).rejects.toThrow('quarantined artifact');
+      await expect(service.review(invalidSpec!.id, { kind: 'feedback', feedback: 'Restore the decision history.', actor: 'Michael' })).resolves.toMatchObject({ kind: 'feedback' });
     } finally { await connection.pool.end(); rmSync(root, { recursive: true, force: true }); }
   }, 30_000);
 });

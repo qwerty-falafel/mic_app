@@ -37,3 +37,9 @@ The remaining validation is intentionally product-facing: complete a real intera
 ## First live usability correction
 
 The first browser session exposed a pause race: MIC stored `PAUSED`, sent `SIGTERM`, then interpreted OpenCode's resulting signal as a user cancellation. The session was recovered from its audit event with its original provider session ID and resumed successfully. Terminal observation now preserves prior `PAUSED`, `CANCELLED` and `INTERRUPTED` control states. Graceful MIC shutdown also interrupts active children explicitly so restart cannot leave an untracked OpenCode process editing the worktree.
+
+## First live planning corrections
+
+The TTS planning rehearsal exposed ambiguity between a workflow question and an artifact decision. The workstream now names the current stage and shows the chain from planning through breakdown, story delivery, review and integration. Workflow conversations use a persistent chat layout with separate speakers, a decision banner, a focused composer and explicit “why” and “next” guidance. Artifact review separately explains what acceptance means, what useful revision feedback contains and which operation follows acceptance.
+
+The rehearsal also found two integrity gaps. JavaScript syntax containing `?` could be mistaken for a human question; question detection now requires a real interrogative line or explicit request. A valid-looking spec could previously sit beside a quarantined append-only memlog. Indexing now evaluates the memlog first, propagates its failure to a newly indexed companion spec, and refuses acceptance whenever the latest companion memlog is missing or quarantined. Feedback remains available so the owning BMAD workflow can repair invalid artifacts.

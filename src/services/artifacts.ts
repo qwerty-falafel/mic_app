@@ -43,7 +43,11 @@ export class ArtifactService {
   async index(workstreamId: string, sessionId?: string) {
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
     if (!stream?.workspacePath) throw new Error('Workstream workspace is unavailable');
-    const root = resolve(stream.workspacePath), paths = await walk(root, resolve(root, '_bmad-output'));
+    const root = resolve(stream.workspacePath), paths = (await walk(root, resolve(root, '_bmad-output'))).sort((left, right) => {
+      const leftMemlog = basename(left).toLowerCase() === '.memlog.md';
+      const rightMemlog = basename(right).toLowerCase() === '.memlog.md';
+      return Number(rightMemlog) - Number(leftMemlog) || left.localeCompare(right);
+    });
     const revision = (await exec('git', ['-C', root, 'rev-parse', 'HEAD'])).stdout.trim();
     const pathSet = new Set(paths);
     const created: (typeof artifactRevisions.$inferSelect)[] = [];
@@ -54,7 +58,14 @@ export class ArtifactService {
       if (existing.length) { created.push(existing[0]!); continue; }
       const parsed = parseArtifact(path, content), issues: string[] = [];
       if (parsed.status && !statuses.has(parsed.status)) issues.push(`Unrecognized status: ${parsed.status}`);
-      if (parsed.type === 'spec' && !pathSet.has(`${dirname(path)}/.memlog.md`)) issues.push('SPEC.md requires an adjacent .memlog.md');
+      if (parsed.type === 'spec') {
+        const memlogPath = `${dirname(path)}/.memlog.md`;
+        if (!pathSet.has(memlogPath)) issues.push('SPEC.md requires an adjacent .memlog.md');
+        else {
+          const companion = created.find(row => row.path === memlogPath);
+          if ((companion?.metadata as any)?.valid === false) issues.push('Adjacent .memlog.md revision is quarantined');
+        }
+      }
       if (parsed.type === 'memlog') {
         const [prior] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path), or(isNull(artifactRevisions.status), ne(artifactRevisions.status, 'quarantined')))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
         if (prior && !content.startsWith(prior.content)) issues.push('Historical memlog content was modified; revisions must append');
@@ -95,8 +106,14 @@ export class ArtifactService {
   async review(artifactRevisionId: string, input: { kind: 'accepted' | 'rejected' | 'feedback' | 'override'; feedback?: string; actor: string }) {
     const [artifact] = await this.db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactRevisionId));
     if (!artifact) throw new Error('Artifact revision not found');
+    if (input.kind === 'accepted' && ((artifact.metadata as any)?.valid === false || artifact.status === 'quarantined')) throw new Error('A quarantined artifact revision cannot be accepted');
     const [latest] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, artifact.workstreamId), eq(artifactRevisions.path, artifact.path))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
     if (input.kind === 'accepted' && latest?.id !== artifact.id) throw new Error('Only the latest artifact revision can be accepted');
+    if (input.kind === 'accepted' && artifact.type === 'spec') {
+      const memlogPath = `${dirname(artifact.path)}/.memlog.md`;
+      const [companion] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, artifact.workstreamId), eq(artifactRevisions.path, memlogPath))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
+      if (!companion || companion.status === 'quarantined' || (companion.metadata as any)?.valid === false) throw new Error('SPEC.md cannot be accepted while its companion .memlog.md is missing or quarantined');
+    }
     const [decision] = await this.db.transaction(async tx => {
       const [row] = await tx.insert(reviewDecisions).values({ id: `review_${randomUUID()}`, artifactRevisionId, ...input }).returning();
       await tx.insert(auditEvents).values({ aggregateType: 'artifact_revision', aggregateId: artifactRevisionId, action: `review.${input.kind}`, actor: input.actor, detail: { feedback: input.feedback }, idempotencyKey: `${row!.id}:audit` });

@@ -69,6 +69,23 @@ Stop the combined development server with one `Ctrl-C`. The next `npm run dev` r
 7. For a spec-backed epic, run Story Breakdown with `bmad-spec`, index the resulting `stories.yaml`, and select **Read stories.yaml**. Dispatch one eligible story with attended Build or Build Auto. MIC never gives Build Auto the whole epic.
 8. Use code review, walkthrough and retrospective operations as the story inventory reaches completion. Final integration is a separate explicit API decision and succeeds only when the base repository is clean and the result is a fast-forward.
 
+### What MIC means by feedback
+
+MIC has two different places where it can ask for your input:
+
+- A **workflow conversation** needs an answer only when its state says **Waiting for input** or **Blocked**. The banner explains why BMAD stopped and what continues after the answer. A Running or Queued operation does not need feedback.
+- An **artifact review** is a decision about one immutable document revision. Open the newest `SPEC.md`, PRD, architecture document, or story inventory. Accept that exact revision if it states the outcome BMAD should implement. If it is wrong or incomplete, describe what must change, what must remain, and any constraint BMAD must respect. MIC records that feedback against the revision and starts its owning workflow to create a new revision.
+
+For a **spec-backed epic**, the normal chain is:
+
+1. BMAD creates and revises `SPEC.md` while MIC preserves `.memlog.md` as its append-only decision history.
+2. You accept the exact valid spec revision. This accepts the plan; it does not start implementation.
+3. BMAD runs Story Breakdown and creates an ordered `stories.yaml` inventory.
+4. You review the stories, then dispatch one eligible story at a time to Build or Build Auto.
+5. Review and validation operations collect implementation evidence. Final acceptance and fast-forward integration remain explicit decisions.
+
+Useful artifact feedback is concrete. For example: `Change the paragraph rule to require sentence punctuation before the line break. Preserve the 5,000-character hard maximum and serial synthesis. Do not add a server API.` A quarantined artifact cannot be accepted; its validation issue appears above the document.
+
 `bmad-loop` remains hidden from the normal workstream choices: its current observed pilot paused with zero completed stories and required manual rollback. MIC will expose it only after that installed contract passes.
 
 ## Development checks
