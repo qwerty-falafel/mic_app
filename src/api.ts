@@ -20,6 +20,7 @@ import { WorkstreamService } from './services/workstreams.js';
 import { WorkflowSessionService } from './services/workflow-sessions.js';
 import { ArtifactService } from './services/artifacts.js';
 import { StoryDeliveryService } from './services/story-delivery.js';
+import { repositoryHealth } from './services/repository-health.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().min(1) });
@@ -69,6 +70,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/questions', async (request, reply) => reply.code(201).send(await kernel.createQuestion(questionInput.parse(request.body), key(request))));
   app.get('/projects', async () => db.select().from(projects).orderBy(desc(projects.createdAt)));
   app.get('/repositories', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return query.projectId ? db.select().from(repositories).where(eq(repositories.projectId, query.projectId)) : db.select().from(repositories); });
+  app.get('/repositories/:id/git-health', async (request, reply) => { const { id: repositoryId } = z.object({ id }).parse(request.params); const [repository] = await db.select().from(repositories).where(eq(repositories.id, repositoryId)); return repository ? repositoryHealth(repository.path, repository.baseBranch) : reply.code(404).send({ error: 'not_found' }); });
   app.get('/work-items', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return query.projectId ? db.select().from(workItems).where(eq(workItems.projectId, query.projectId)).orderBy(desc(workItems.createdAt)) : db.select().from(workItems).orderBy(desc(workItems.createdAt)); });
   app.get('/runs', async request => { const query = z.object({ workItemId: id.optional() }).parse(request.query); return query.workItemId ? db.select().from(runs).where(eq(runs.workItemId, query.workItemId)).orderBy(desc(runs.createdAt)) : db.select().from(runs).orderBy(desc(runs.createdAt)); });
   app.get('/questions', async request => { const query = z.object({ status: id.optional(), workItemId: id.optional() }).parse(request.query); const clauses = [query.status ? eq(questions.status, query.status) : undefined, query.workItemId ? eq(questions.workItemId, query.workItemId) : undefined].filter(Boolean) as any[]; return db.select().from(questions).where(clauses.length ? and(...clauses) : undefined).orderBy(desc(questions.createdAt)); });

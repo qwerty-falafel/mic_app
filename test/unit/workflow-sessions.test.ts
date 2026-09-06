@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awaitsInput, conversationFromJsonl } from '../../src/services/workflow-sessions.js';
+import { awaitsInput, conversationFromJsonl, preserveControlState } from '../../src/services/workflow-sessions.js';
 
 describe('durable workflow conversation contracts', () => {
   it('extracts the provider session and assistant output from OpenCode JSONL', () => {
@@ -12,7 +12,14 @@ describe('durable workflow conversation contracts', () => {
 
   it('distinguishes a conversational checkpoint from completed output', () => {
     expect(awaitsInput('bmad-prd', 'Which audience should this serve?', [])).toBe(true);
+    expect(awaitsInput('bmad-prd', 'Draft saved. Continue to the next section?', ['draft-prd.md'])).toBe(true);
     expect(awaitsInput('bmad-prd', 'Created the PRD.', ['_bmad-output/planning-artifacts/prd.md'])).toBe(false);
     expect(awaitsInput('bmad-help', 'Would you like guidance?', [])).toBe(false);
+  });
+
+  it('does not let the SIGTERM observation overwrite an intentional pause', () => {
+    expect(preserveControlState('PAUSED', 'CANCELLED')).toBe('PAUSED');
+    expect(preserveControlState('CANCELLED', 'FAILED')).toBe('CANCELLED');
+    expect(preserveControlState('RUNNING', 'FINISHED')).toBe('FINISHED');
   });
 });

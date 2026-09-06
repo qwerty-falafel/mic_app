@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { EventEmitter } from 'node:events';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { auditEvents, conversationTurns, outboxEvents, repositories, workflowSessions, workstreams } from '../db/schema.js';
+import { auditEvents, conversationTurns, outboxEvents, repositories, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
 import { BmadRunnerAdapter, type WorkflowRunResult } from '../adapters/bmad-runner.js';
 import { WorktreeManager } from '../worktree.js';
 import { WorkstreamService } from './workstreams.js';
@@ -24,8 +24,13 @@ export function conversationFromJsonl(stdout: string) {
 }
 
 export function awaitsInput(skill: string, content: string, artifactRefs: string[]) {
-  if (skill === 'bmad-help' || artifactRefs.length > 0) return false;
+  if (skill === 'bmad-help') return false;
+  void artifactRefs;
   return /(?:\?|choose|select|reply|provide|would you like|\[[a-z0-9]+\]\s)/i.test(content.slice(-2000));
+}
+
+export function preserveControlState(persisted: string | undefined, observed: string) {
+  return persisted === 'PAUSED' ? 'PAUSED' : persisted === 'CANCELLED' ? 'CANCELLED' : observed;
 }
 
 export class WorkflowSessionService {
@@ -89,7 +94,12 @@ export class WorkflowSessionService {
     const existing = await this.db.select().from(conversationTurns).where(eq(conversationTurns.sessionId, session.id));
     const waiting = result.status === 'done' && awaitsInput(session.skill, parsed.content, result.artifactRefs);
     const ambiguous = result.status === 'done' && session.skill !== 'bmad-help' && !waiting && result.artifactRefs.length === 0;
-    const status = result.status === 'blocked' ? 'BLOCKED' : result.status === 'cancelled' ? 'CANCELLED' : result.status === 'failed' ? 'FAILED' : waiting ? 'WAITING_FOR_INPUT' : ambiguous ? 'NEEDS_CLASSIFICATION' : 'FINISHED';
+    const [persisted] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, session.id));
+    const observedStatus = result.status === 'blocked' ? 'BLOCKED' : result.status === 'cancelled' ? 'CANCELLED' : result.status === 'failed' ? 'FAILED' : waiting ? 'WAITING_FOR_INPUT' : ambiguous ? 'NEEDS_CLASSIFICATION' : 'FINISHED';
+    // Pause and cancel update the durable state before SIGTERM reaches OpenCode.
+    // The ensuing process observation must not reinterpret an intentional pause
+    // as a cancellation or undo an explicit cancellation.
+    const status = preserveControlState(persisted?.status, observedStatus);
     const workspace = String(result.rawAdapterState.worktree ?? '');
     if (workspace) {
       await exec('git', ['-C', workspace, 'add', '-A', '--', '.', ':(exclude)_bmad', ':(exclude).mic']);
@@ -100,6 +110,11 @@ export class WorkflowSessionService {
     await this.db.transaction(async tx => {
       if (parsed.content) await tx.insert(conversationTurns).values({ id: `turn_${randomUUID()}`, sessionId: session.id, sequence: existing.length + 1, role: 'assistant', content: parsed.content, metadata: { artifactRefs: result.artifactRefs } });
       await tx.update(workflowSessions).set({ status, providerSessionId: parsed.providerSessionId ?? session.providerSessionId, rawState: result, updatedAt: new Date(), finishedAt: ['FINISHED', 'FAILED', 'CANCELLED'].includes(status) ? new Date() : null }).where(eq(workflowSessions.id, session.id));
+      const storyKey = (session.args as Record<string, unknown>)?.storyId;
+      if (typeof storyKey === 'string') {
+        const storyStatus = status === 'FINISHED' ? 'done' : status === 'BLOCKED' ? 'blocked' : status === 'FAILED' ? 'review' : status === 'WAITING_FOR_INPUT' ? 'in-progress' : undefined;
+        if (storyStatus) await tx.update(storyUnits).set({ status: storyStatus, metadata: { sessionId: session.id, artifactRefs: result.artifactRefs, repositoryRevision: result.repositoryRevisions.result }, updatedAt: new Date() }).where(and(eq(storyUnits.workstreamId, session.workstreamId), eq(storyUnits.storyKey, storyKey)));
+      }
       await tx.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: session.id, action: status.toLowerCase(), actor: 'system', detail: { summary: result.summary, artifactRefs: result.artifactRefs }, idempotencyKey: `${session.id}:${existing.length}:${status}` }).onConflictDoNothing();
     });
     this.publish(session.id, { type: 'turn', status, content: parsed.content, artifactRefs: result.artifactRefs });

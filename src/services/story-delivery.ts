@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import { parse as parseYaml } from 'yaml';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { artifactRevisions, auditEvents, integrationDecisions, repositories, storyUnits, workstreams } from '../db/schema.js';
+import { artifactRevisions, auditEvents, integrationDecisions, repositories, reviewDecisions, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
 
 const exec = promisify(execFile);
 
@@ -53,6 +53,10 @@ export class StoryDeliveryService {
   async integrate(workstreamId: string, actor: string) {
     const readiness = await this.retrospectiveReady(workstreamId);
     if (!readiness.ready) throw new Error('All stories must be complete before integration');
+    const accepted = await this.db.select({ id: reviewDecisions.id }).from(reviewDecisions).innerJoin(artifactRevisions, eq(reviewDecisions.artifactRevisionId, artifactRevisions.id)).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(reviewDecisions.kind, 'accepted'))).limit(1);
+    if (!accepted.length) throw new Error('At least one final artifact revision must be explicitly accepted before integration');
+    const retrospective = await this.db.select().from(workflowSessions).where(and(eq(workflowSessions.workstreamId, workstreamId), eq(workflowSessions.skill, 'bmad-retrospective'), eq(workflowSessions.status, 'FINISHED'))).limit(1);
+    if (!retrospective.length) throw new Error('A finished BMAD retrospective is required before integration');
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
     const [repository] = stream?.repositoryId ? await this.db.select().from(repositories).where(eq(repositories.id, stream.repositoryId)) : [];
     if (!stream?.workspacePath || !stream.baselineRevision || !repository) throw new Error('Workstream Git provenance is unavailable');
