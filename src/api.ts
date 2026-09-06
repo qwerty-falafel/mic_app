@@ -23,6 +23,7 @@ import { StoryDeliveryService } from './services/story-delivery.js';
 import { repositoryHealth } from './services/repository-health.js';
 import { ProductService } from './services/products.js';
 import { DeliveryProjectionService } from './services/delivery-projection.js';
+import { ScrumService } from './services/scrum.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().min(1), definitionOfDone: z.string().trim().min(1).optional() });
@@ -47,6 +48,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   const stories = new StoryDeliveryService(db);
   const products = new ProductService(db);
   const delivery = new DeliveryProjectionService(db);
+  const scrum = new ScrumService(db);
   void sessions.recoverActive();
   app.addHook('onClose', async () => { await sessions.interruptActive(); });
   const key = (request: { headers: Record<string, unknown> }) => typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : randomUUID();
@@ -91,6 +93,15 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/products/:id/features', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ name: z.string().trim().min(1), description: z.string().optional(), status: z.enum(['proposed', 'active', 'deprecated', 'retired']).optional() }).parse(request.body); return reply.code(201).send(await products.createFeature(projectId, body)); });
   app.post('/features/:id/deliveries', async (request, reply) => { const { id: featureId } = z.object({ id }).parse(request.params); const { workstreamId } = z.object({ workstreamId: id }).parse(request.body); return reply.code(201).send(await products.linkFeature(featureId, workstreamId)); });
   app.post('/products/:id/definition-of-done', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const { definitionOfDone } = z.object({ definitionOfDone: z.string().trim().min(1) }).parse(request.body); return products.updateDefinitionOfDone(projectId, definitionOfDone); });
+  app.get('/product-backlog', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listBacklog(projectId); });
+  app.post('/product-backlog', async (request, reply) => { const body = z.object({ projectId: id, featureId: id.optional(), workstreamId: id.optional(), storyUnitId: id.optional(), kind: z.enum(['change', 'epic', 'story', 'defect', 'research', 'correction']), title: z.string().trim().min(1), description: z.string().optional(), order: z.number().int().optional(), acceptanceCriteria: z.array(z.string().trim().min(1)).optional() }).parse(request.body); return reply.code(201).send(await scrum.createBacklogItem(body)); });
+  app.post('/product-backlog/:id/status', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const { status } = z.object({ status: z.enum(['proposed', 'ready', 'in-progress', 'done', 'removed']) }).parse(request.body); return scrum.updateBacklogStatus(itemId, status); });
+  app.get('/scrum-sprints', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listSprints(projectId); });
+  app.post('/scrum-sprints', async (request, reply) => { const body = z.object({ projectId: id, number: z.number().int().positive(), goal: z.string().trim().min(1), startsAt: z.coerce.date(), endsAt: z.coerce.date() }).parse(request.body); return reply.code(201).send(await scrum.createSprint(body)); });
+  app.post('/scrum-sprints/:id/items', async request => { const { id: sprintId } = z.object({ id }).parse(request.params); const { backlogItemId } = z.object({ backlogItemId: id }).parse(request.body); return scrum.selectItem(sprintId, backlogItemId); });
+  app.post('/scrum-sprints/:id/status', async request => { const { id: sprintId } = z.object({ id }).parse(request.params); const { status } = z.object({ status: z.enum(['planned', 'active', 'completed', 'cancelled']) }).parse(request.body); return scrum.setSprintStatus(sprintId, status); });
+  app.get('/increments', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listIncrements(projectId); });
+  app.post('/increments', async (request, reply) => { const body = z.object({ projectId: id, sprintId: id.optional(), title: z.string().trim().min(1), description: z.string().optional(), evidence: z.record(z.string(), z.unknown()).optional() }).parse(request.body); return reply.code(201).send(await scrum.createIncrement(body)); });
   app.get('/repositories', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return query.projectId ? db.select().from(repositories).where(eq(repositories.projectId, query.projectId)) : db.select().from(repositories); });
   app.get('/repositories/:id/git-health', async (request, reply) => { const { id: repositoryId } = z.object({ id }).parse(request.params); const [repository] = await db.select().from(repositories).where(eq(repositories.id, repositoryId)); return repository ? repositoryHealth(repository.path, repository.baseBranch) : reply.code(404).send({ error: 'not_found' }); });
   app.get('/work-items', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return query.projectId ? db.select().from(workItems).where(eq(workItems.projectId, query.projectId)).orderBy(desc(workItems.createdAt)) : db.select().from(workItems).orderBy(desc(workItems.createdAt)); });

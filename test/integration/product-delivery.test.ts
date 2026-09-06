@@ -81,5 +81,19 @@ describe('product model and delivery lifecycle projection', () => {
     expect(stale.statusCode).toBe(409);
     const valid = await app.inject({ method: 'POST', url: `/workstreams/${delivery.id}/actions/create-story-plan/validate`, payload: { actionToken: breakdown.actionToken } });
     expect(valid.statusCode).toBe(200);
+
+    const backlogItem = (await app.inject({ method: 'POST', url: '/product-backlog', payload: { projectId: product.id, featureId: feature.id, workstreamId: delivery.id, kind: 'epic', title: 'Long-form playback', acceptanceCriteria: ['Reads beyond 5,000 characters'] } })).json<any>();
+    expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toEqual([expect.objectContaining({ item: expect.objectContaining({ id: backlogItem.id }), feature: expect.objectContaining({ id: feature.id }), delivery: expect.objectContaining({ id: delivery.id }) })]);
+    const sprint = (await app.inject({ method: 'POST', url: '/scrum-sprints', payload: { projectId: product.id, number: 1, goal: 'Deliver usable long-form playback', startsAt: '2026-09-07T09:00:00Z', endsAt: '2026-09-14T09:00:00Z' } })).json<any>();
+    expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/items`, payload: { backlogItemId: backlogItem.id } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/status`, payload: { status: 'active' } })).json()).toMatchObject({ status: 'active', goal: 'Deliver usable long-form playback' });
+    expect((await app.inject({ method: 'POST', url: `/product-backlog/${backlogItem.id}/status`, payload: { status: 'done' } })).statusCode).toBe(200);
+    const increment = await app.inject({ method: 'POST', url: '/increments', payload: { projectId: product.id, sprintId: sprint.id, title: 'Long-form playback increment', evidence: { tests: 'passed' } } });
+    expect(increment.statusCode).toBe(201);
+    expect(increment.json()).toMatchObject({ definitionOfDone: expect.stringContaining('usable'), sprintId: sprint.id });
+
+    const tooLong = await app.inject({ method: 'POST', url: '/scrum-sprints', payload: { projectId: product.id, number: 2, goal: 'Invalid timebox', startsAt: '2026-09-01T09:00:00Z', endsAt: '2026-10-15T09:00:00Z' } });
+    expect(tooLong.statusCode).toBe(500);
+    expect(tooLong.json()).toMatchObject({ message: expect.stringContaining('one month') });
   }, 30_000);
 });

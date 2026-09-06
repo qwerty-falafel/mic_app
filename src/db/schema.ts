@@ -124,6 +124,23 @@ export const integrationDecisions = pgTable('integration_decisions', {
   id: text('id').primaryKey(), workstreamId: text('workstream_id').notNull().references(() => workstreams.id, { onDelete: 'cascade' }), actor: text('actor').notNull(), baseRevision: text('base_revision').notNull(), resultRevision: text('result_revision').notNull(), status: text('status').notNull(), detail: jsonb('detail').notNull().default({}), createdAt: createdAt(),
 }, table => [index('integration_decision_workstream_idx').on(table.workstreamId, table.createdAt)]);
 
+export const productBacklogItems = pgTable('product_backlog_items', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), featureId: text('feature_id').references(() => features.id, { onDelete: 'set null' }), workstreamId: text('workstream_id').references(() => workstreams.id, { onDelete: 'set null' }), storyUnitId: text('story_unit_id').references(() => storyUnits.id, { onDelete: 'set null' }),
+  kind: text('kind').notNull().default('story'), title: text('title').notNull(), description: text('description').notNull().default(''), status: text('status').notNull().default('proposed'), order: integer('order').notNull().default(0), acceptanceCriteria: jsonb('acceptance_criteria').notNull().default([]), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('product_backlog_project_order_idx').on(table.projectId, table.order), uniqueIndex('product_backlog_story_unit_idx').on(table.storyUnitId)]);
+
+export const scrumSprints = pgTable('scrum_sprints', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), number: integer('number').notNull(), goal: text('goal').notNull(), status: text('status').notNull().default('planned'), startsAt: timestamp('starts_at', { withTimezone: true }).notNull(), endsAt: timestamp('ends_at', { withTimezone: true }).notNull(), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('scrum_sprint_project_number_idx').on(table.projectId, table.number), index('scrum_sprint_project_status_idx').on(table.projectId, table.status)]);
+
+export const sprintBacklogItems = pgTable('sprint_backlog_items', {
+  sprintId: text('sprint_id').notNull().references(() => scrumSprints.id, { onDelete: 'cascade' }), backlogItemId: text('backlog_item_id').notNull().references(() => productBacklogItems.id, { onDelete: 'cascade' }), selectedAt: createdAt(),
+}, table => [uniqueIndex('sprint_backlog_item_idx').on(table.sprintId, table.backlogItemId), index('sprint_backlog_item_lookup_idx').on(table.backlogItemId)]);
+
+export const increments = pgTable('increments', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), sprintId: text('sprint_id').references(() => scrumSprints.id, { onDelete: 'set null' }), title: text('title').notNull(), description: text('description').notNull().default(''), definitionOfDone: text('definition_of_done').notNull(), evidence: jsonb('evidence').notNull().default({}), createdAt: createdAt(),
+}, table => [index('increments_project_idx').on(table.projectId, table.createdAt)]);
+
 export type Project = typeof projects.$inferSelect;
 export type Repository = typeof repositories.$inferSelect;
 export type WorkItem = typeof workItems.$inferSelect;

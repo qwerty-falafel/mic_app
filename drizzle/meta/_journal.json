@@ -64,6 +64,13 @@
       "when": 1788718163073,
       "tag": "0008_harsh_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788722336896,
+      "tag": "0009_thin_cargill",
+      "breakpoints": true
     }
   ]
 }
