@@ -32,6 +32,10 @@ const workItemInput = z.object({ projectId: id, title: z.string().min(1), intent
 const runInput = z.object({ workItemId: id, kind: z.string().min(1), model: z.string().optional(), status: z.string().optional(), baselineRevision: z.string().optional() });
 const questionInput = z.object({ workItemId: id, runId: id.optional(), question: z.string().min(1), context: z.record(z.string(), z.unknown()).optional(), resumeRef: z.record(z.string(), z.unknown()).optional() });
 
+export function isBrowserDocumentRequest(request: { method: string; headers: Record<string, unknown> }) {
+  return request.method === 'GET' && String(request.headers.accept ?? '').includes('text/html');
+}
+
 export function createApp(db: Database, executor?: LifecycleExecutor) {
   const app = Fastify({ logger: false });
   void app.register(cors, { origin: true });
@@ -79,8 +83,9 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/runs', async (request, reply) => reply.code(201).send(await kernel.createRun(runInput.parse(request.body), key(request))));
   app.post('/questions', async (request, reply) => reply.code(201).send(await kernel.createQuestion(questionInput.parse(request.body), key(request))));
   app.get('/projects', async () => db.select().from(projects).orderBy(desc(projects.createdAt)));
-  app.get('/products', async () => db.select().from(projects).orderBy(desc(projects.createdAt)));
+  app.get('/products', async (request, reply) => isBrowserDocumentRequest(request) && existsSync(frontend) ? reply.sendFile('index.html') : db.select().from(projects).orderBy(desc(projects.createdAt)));
   app.get('/products/:reference', async (request, reply) => {
+    if (isBrowserDocumentRequest(request) && existsSync(frontend)) return reply.sendFile('index.html');
     const { reference } = z.object({ reference: id }).parse(request.params);
     const product = await products.getByReference(reference);
     if (!product) return reply.code(404).send({ error: 'not_found' });
@@ -195,7 +200,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/work-items/:id/pause', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ reason: z.string().trim().min(1), actor: id }).parse(request.body); return requireLifecycle().pause(entityId, body.reason, body.actor); });
   app.post('/questions/:id/answer', async request => { const { id: entityId } = z.object({ id }).parse(request.params); const body = z.object({ answer: z.string().min(1), actor: id }).parse(request.body); return requireLifecycle().answerQuestion(entityId, body.answer, body.actor); });
   app.setNotFoundHandler((request, reply) => {
-    if (request.method === 'GET' && existsSync(frontend) && String(request.headers.accept ?? '').includes('text/html')) return reply.sendFile('index.html');
+    if (isBrowserDocumentRequest(request) && existsSync(frontend)) return reply.sendFile('index.html');
     return reply.code(404).send({ error: 'not_found' });
   });
   return app;
