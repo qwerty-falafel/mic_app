@@ -3,8 +3,17 @@ import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqu
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
 export const projects = pgTable('projects', {
-  id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), name: text('name').notNull(), createdAt: createdAt(),
+  id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), name: text('name').notNull(), slug: text('slug').notNull().unique(),
+  definitionOfDone: text('definition_of_done').notNull().default('The accepted outcome is integrated, usable, verified against its acceptance criteria, and supported by recorded evidence.'), createdAt: createdAt(),
 });
+
+export const productGoals = pgTable('product_goals', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), statement: text('statement').notNull(), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('product_goals_project_status_idx').on(table.projectId, table.status)]);
+
+export const features = pgTable('features', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), slug: text('slug').notNull(), name: text('name').notNull(), description: text('description').notNull().default(''), status: text('status').notNull().default('active'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('features_project_slug_idx').on(table.projectId, table.slug), index('features_project_status_idx').on(table.projectId, table.status)]);
 
 export const repositories = pgTable('repositories', {
   id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -73,10 +82,14 @@ export const evidenceRecords = pgTable('evidence_records', {
 
 export const workstreams = pgTable('workstreams', {
   id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), repositoryId: text('repository_id').references(() => repositories.id, { onDelete: 'set null' }),
-  legacyWorkItemId: text('legacy_work_item_id').references(() => workItems.id, { onDelete: 'set null' }), title: text('title').notNull(), intent: text('intent').notNull(), path: text('path').notNull().default('undecided'), status: text('status').notNull().default('ACTIVE'),
+  legacyWorkItemId: text('legacy_work_item_id').references(() => workItems.id, { onDelete: 'set null' }), slug: text('slug').notNull(), title: text('title').notNull(), intent: text('intent').notNull(), summary: text('summary').notNull().default(''), classification: text('classification').notNull().default('unclassified'), path: text('path').notNull().default('undecided'), status: text('status').notNull().default('ACTIVE'),
   workspacePath: text('workspace_path'), branch: text('branch'), baselineRevision: text('baseline_revision'),
   createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, table => [index('workstreams_project_status_idx').on(table.projectId, table.status)]);
+}, table => [index('workstreams_project_status_idx').on(table.projectId, table.status), uniqueIndex('workstreams_project_slug_idx').on(table.projectId, table.slug)]);
+
+export const featureDeliveryCases = pgTable('feature_delivery_cases', {
+  featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }), workstreamId: text('workstream_id').notNull().references(() => workstreams.id, { onDelete: 'cascade' }), createdAt: createdAt(),
+}, table => [uniqueIndex('feature_delivery_case_idx').on(table.featureId, table.workstreamId), index('feature_delivery_workstream_idx').on(table.workstreamId)]);
 
 export const workflowDefinitions = pgTable('workflow_definitions', {
   id: text('id').primaryKey(), repositoryId: text('repository_id').notNull().references(() => repositories.id, { onDelete: 'cascade' }), fingerprint: text('fingerprint').notNull(), module: text('module').notNull(), skill: text('skill').notNull(), displayName: text('display_name').notNull(), phase: text('phase').notNull(), action: text('action'), required: boolean('required').notNull().default(false), metadata: jsonb('metadata').notNull().default({}), createdAt: createdAt(),
