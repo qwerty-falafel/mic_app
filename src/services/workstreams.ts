@@ -24,6 +24,17 @@ export class WorkstreamService {
 
   list(projectId?: string) { return projectId ? this.db.select().from(workstreams).where(eq(workstreams.projectId, projectId)).orderBy(desc(workstreams.updatedAt)) : this.db.select().from(workstreams).orderBy(desc(workstreams.updatedAt)); }
 
+  async selectPath(workstreamId: string, path: 'direct' | 'spec-epic' | 'project' | 'specialist', actor = 'api') {
+    return this.db.transaction(async tx => {
+      const [stream] = await tx.select().from(workstreams).where(eq(workstreams.id, workstreamId));
+      if (!stream) throw new Error('Workstream not found');
+      if (stream.path !== 'undecided' && stream.path !== path) throw new Error('A selected development path cannot be replaced; use Correct Course');
+      const [updated] = await tx.update(workstreams).set({ path, updatedAt: new Date() }).where(eq(workstreams.id, workstreamId)).returning();
+      await tx.insert(auditEvents).values({ aggregateType: 'workstream', aggregateId: workstreamId, action: 'path.selected', actor, detail: { path }, idempotencyKey: `${workstreamId}:path:${path}` }).onConflictDoNothing();
+      return updated;
+    });
+  }
+
   async operations(workstreamId: string) {
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
     if (!stream?.repositoryId) return [];

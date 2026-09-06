@@ -75,7 +75,13 @@ describe('durable MIC kernel', () => {
     expect(refreshed.statusCode).toBe(200);
     expect(refreshed.json<{ count: number }>().count).toBeGreaterThan(10);
     const workstream = (await firstApp.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'acceptance-workstream' }, payload: { projectId: project.id, repositoryId: repository.id, legacyWorkItemId: workItem.id, title: 'Native flow', intent: 'Exercise BMAD', path: 'spec-epic' } })).json<{ id: string }>();
-    expect((await firstApp.inject({ method: 'GET', url: `/workstreams/${workstream.id}/operations` })).json<any[]>()).toEqual(expect.arrayContaining([expect.objectContaining({ skill: 'bmad-spec' })]));
+    expect((await firstApp.inject({ method: 'GET', url: `/workstreams/${workstream.id}/operations` })).json<any[]>()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ skill: 'bmad-spec' }), expect.objectContaining({ skill: 'bmad-project-context' }), expect.objectContaining({ skill: 'bmad-code-review' }),
+    ]));
+    const undecided = (await firstApp.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'undecided-workstream' }, payload: { projectId: project.id, repositoryId: repository.id, title: 'Ask BMAD first', intent: 'Recommend a path', path: 'undecided' } })).json<{ id: string }>();
+    expect((await firstApp.inject({ method: 'GET', url: `/workstreams/${undecided.id}/operations` })).json<any[]>()).toEqual([expect.objectContaining({ skill: 'bmad-help' })]);
+    expect((await firstApp.inject({ method: 'POST', url: `/workstreams/${undecided.id}/path`, payload: { path: 'spec-epic', actor: 'Michael' } })).json()).toMatchObject({ path: 'spec-epic' });
+    expect((await firstApp.inject({ method: 'POST', url: `/workstreams/${undecided.id}/path`, payload: { path: 'project', actor: 'Michael' } })).statusCode).toBe(500);
     const run = (await firstApp.inject({ method: 'POST', url: '/runs', headers: { 'idempotency-key': 'acceptance-run' }, payload: { workItemId: workItem.id, kind: 'planning', baselineRevision: 'abc123' } })).json<{ id: string }>();
     const question = (await firstApp.inject({ method: 'POST', url: '/questions', headers: { 'idempotency-key': 'acceptance-question' }, payload: { workItemId: workItem.id, runId: run.id, question: 'Proceed?' } })).json<{ id: string }>();
     expect((await firstApp.inject({ method: 'GET', url: '/system/status' })).statusCode).toBe(200);
@@ -98,7 +104,7 @@ describe('durable MIC kernel', () => {
     for (const [path, entityId] of [['projects', project.id], ['repositories', repository.id], ['runs', run.id], ['questions', question.id]]) {
       expect((await secondApp.inject({ method: 'GET', url: `/${path}/${entityId}` })).statusCode).toBe(200);
     }
-    expect((await secondApp.inject({ method: 'GET', url: `/workstreams?projectId=${project.id}` })).json()).toEqual([expect.objectContaining({ id: workstream.id, legacyWorkItemId: workItem.id })]);
+    expect((await secondApp.inject({ method: 'GET', url: `/workstreams?projectId=${project.id}` })).json()).toEqual(expect.arrayContaining([expect.objectContaining({ id: workstream.id, legacyWorkItemId: workItem.id })]));
     expect(await second.db.select().from(auditEvents).where(eq(auditEvents.idempotencyKey, 'workstream:acceptance-workstream:audit'))).toHaveLength(1);
 
     const runtime = new OutboxRuntime(second.db, databaseUrl);

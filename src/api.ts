@@ -10,7 +10,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import type { Database } from './db/client.js';
-import { approvals, artifactRevisions, auditEvents, evidenceRecords, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, projects, questions, repositories, runs, workItems, workflowSessions } from './db/schema.js';
+import { approvals, artifactRevisions, auditEvents, evidenceRecords, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, projects, questions, repositories, reviewDecisions, runs, workItems, workflowSessions } from './db/schema.js';
 import { Kernel } from './kernel.js';
 import { LifecycleService, type LifecycleExecutor } from './services/lifecycle.js';
 import { evaluateGates, type Evidence } from './gates/validator.js';
@@ -81,6 +81,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.get('/repositories/:id/bmad/health', async request => { const { id: repositoryId } = z.object({ id }).parse(request.params); return catalog.health(repositoryId); });
   app.post('/workstreams', async (request, reply) => { const body = z.object({ projectId: id, repositoryId: id.optional(), legacyWorkItemId: id.optional(), title: z.string().min(1), intent: z.string().min(1), path: z.enum(['undecided', 'direct', 'spec-epic', 'project', 'specialist']).default('undecided') }).parse(request.body); return reply.code(201).send(await streams.create(body, key(request))); });
   app.get('/workstreams', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return streams.list(query.projectId); });
+  app.post('/workstreams/:id/path', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); const body = z.object({ path: z.enum(['direct', 'spec-epic', 'project', 'specialist']), actor: id.optional() }).parse(request.body); return streams.selectPath(workstreamId, body.path, body.actor); });
   app.get('/workstreams/:id/operations', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return streams.operations(workstreamId); });
   app.post('/workflow-sessions', async (request, reply) => { const body = z.object({ workstreamId: id, skill: id, action: id.optional(), args: z.record(z.string(), z.unknown()).optional(), prompt: z.string().min(1) }).parse(request.body); return reply.code(202).send(await sessions.start(body)); });
   app.get('/workflow-sessions', async request => { const query = z.object({ workstreamId: id.optional() }).parse(request.query); return sessions.list(query.workstreamId); });
@@ -101,6 +102,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/workstreams/:id/artifacts/index', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); const body = z.object({ sessionId: id.optional() }).parse(request.body ?? {}); return artifacts.index(workstreamId, body.sessionId); });
   app.get('/artifacts', async request => { const query = z.object({ workstreamId: id }).parse(request.query); return artifacts.list(query.workstreamId); });
   app.get('/artifacts/:id', async (request, reply) => { const { id: artifactId } = z.object({ id }).parse(request.params); const [artifact] = await db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactId)); return artifact ? reply.send(artifact) : reply.code(404).send({ error: 'not_found' }); });
+  app.get('/artifacts/:id/reviews', async request => { const { id: artifactId } = z.object({ id }).parse(request.params); return db.select().from(reviewDecisions).where(eq(reviewDecisions.artifactRevisionId, artifactId)).orderBy(desc(reviewDecisions.createdAt)); });
   app.get('/artifacts/:id/download', async (request, reply) => { const { id: artifactId } = z.object({ id }).parse(request.params); const [artifact] = await db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactId)); return artifact ? reply.header('content-disposition', `attachment; filename="${artifact.path.split('/').at(-1)}"`).type('text/plain').send(artifact.content) : reply.code(404).send({ error: 'not_found' }); });
   app.get('/workstreams/:id/artifact-graph', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return artifacts.graph(workstreamId); });
   app.get('/artifact-diff', async request => { const query = z.object({ from: id, to: id }).parse(request.query); return artifacts.diff(query.from, query.to); });

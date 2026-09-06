@@ -35,18 +35,23 @@ export function preserveControlState(persisted: string | undefined, observed: st
 
 export class WorkflowSessionService {
   readonly events = new EventEmitter();
-  private readonly pending: Array<() => Promise<void>> = [];
+  private readonly pending: Array<{ sessionId: string; task: () => Promise<void> }> = [];
   private active = false;
   constructor(private readonly db: Database, private readonly model: string, private readonly runner = new BmadRunnerAdapter(), private readonly trees = new WorktreeManager(), private readonly streams = new WorkstreamService(db)) {}
 
   private publish(sessionId: string, event: Record<string, unknown>) { this.events.emit(sessionId, event); }
 
-  private schedule(task: () => Promise<void>) { this.pending.push(task); void this.pump(); }
+  private schedule(sessionId: string, task: () => Promise<void>) { this.pending.push({ sessionId, task }); void this.pump(); }
   private async pump() {
     if (this.active || !this.pending.length) return;
     const memory = await localMemory();
-    if (memory.availableMiB < 200 || memory.availableMiB / memory.totalMiB < .25) { setTimeout(() => void this.pump(), 5000); return; }
-    const task = this.pending.shift()!; this.active = true;
+    const next = this.pending[0]!;
+    if (memory.availableMiB < 200 || memory.availableMiB / memory.totalMiB < .25) {
+      await this.db.update(workflowSessions).set({ status: 'RESOURCE_WAITING', updatedAt: new Date() }).where(and(eq(workflowSessions.id, next.sessionId), inArray(workflowSessions.status, ['QUEUED', 'RESOURCE_WAITING'])));
+      this.publish(next.sessionId, { type: 'status', status: 'RESOURCE_WAITING', memory });
+      setTimeout(() => void this.pump(), 5000); return;
+    }
+    const { task } = this.pending.shift()!; this.active = true;
     try { await task(); } finally { this.active = false; void this.pump(); }
   }
 
@@ -73,7 +78,7 @@ export class WorkflowSessionService {
       return [created];
     });
     const baseline = stream.baselineRevision ?? (await exec('git', ['-C', repository.path, 'rev-parse', repository.baseBranch])).stdout.trim();
-    this.schedule(async () => { const [current] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); if (current?.status === 'CANCELLED') return; await this.db.update(workflowSessions).set({ status: 'RUNNING', updatedAt: new Date() }).where(eq(workflowSessions.id, sessionId)); this.publish(sessionId, { type: 'status', status: 'RUNNING' }); await this.execute({ ...row!, status: 'RUNNING' }, repository.path, workspace, baseline); });
+    this.schedule(sessionId, async () => { const [current] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); if (current?.status === 'CANCELLED') return; await this.db.update(workflowSessions).set({ status: 'RUNNING', updatedAt: new Date() }).where(eq(workflowSessions.id, sessionId)); this.publish(sessionId, { type: 'status', status: 'RUNNING' }); await this.execute({ ...row!, status: 'RUNNING' }, repository.path, workspace, baseline); });
     return row;
   }
 
@@ -134,7 +139,7 @@ export class WorkflowSessionService {
       return true;
     });
     if (!inserted) return { sessionId, status: session.status, duplicate: true };
-    this.schedule(async () => { const [current] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); if (current?.status === 'CANCELLED') return; await this.db.update(workflowSessions).set({ status: 'RUNNING', updatedAt: new Date() }).where(eq(workflowSessions.id, sessionId)); await this.execute({ ...session, status: 'RUNNING' }, repository.path, stream.workspacePath!, stream.baselineRevision!); });
+    this.schedule(sessionId, async () => { const [current] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); if (current?.status === 'CANCELLED') return; await this.db.update(workflowSessions).set({ status: 'RUNNING', updatedAt: new Date() }).where(eq(workflowSessions.id, sessionId)); await this.execute({ ...session, status: 'RUNNING' }, repository.path, stream.workspacePath!, stream.baselineRevision!); });
     return { sessionId, status: 'QUEUED' };
   }
 
