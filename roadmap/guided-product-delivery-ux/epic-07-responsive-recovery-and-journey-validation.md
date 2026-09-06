@@ -18,7 +18,7 @@ MIC prevents predictable invalid actions, reports local actionable failures, rem
 3. Handle stale action tokens, changed Git state, model unavailability, invalid artifacts, missing prerequisites, and concurrent session conflicts.
 4. Audit keyboard order, focus placement, landmarks, labels, contrast, reduced motion, and screen-reader state announcements.
 5. Validate fixed shell, drawers, review, chat, tables, and decision controls at 390 px, tablet, and desktop widths.
-6. Add browser tests for Home → Product → current delivery task; artifact feedback and return; acceptance and next action; breakdown; story dispatch; wait/answer; pause/refresh/resume; and integration refusal.
+6. Add browser tests for Home → Product → current delivery task; artifact feedback and return; acceptance and next action; breakdown; Sprint Goal and PBI selection; story dispatch; wait/answer; pause/refresh/resume; Increment inspection; Sprint Review and Retrospective; and integration refusal.
 7. Add visual regression fixtures for long Briefs, many revisions, long conversations, invalid artifacts, blocked runs, and large story inventories.
 8. Instrument local UX evidence: route visited, recommended action shown, override used, error category, decision latency, and abandoned action, without external telemetry.
 9. Run a clean first-use test where the participant has no BMAD command knowledge.

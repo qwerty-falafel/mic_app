@@ -137,6 +137,8 @@ MIC's provisional neutral term for the durable control-plane container currently
 
 The UI should normally show its classified human type—Change, Epic, Product Initiative, Research, or Correction—rather than expose `workstream` as product methodology.
 
+Before classification, the primary user-facing object is the **Brief**. **Start work** is an acceptable action label, but Work is not another domain entity.
+
 ## BMAD translation rules
 
 BMAD provides adaptive software-planning and delivery workflows. MIC wraps those workflows with durable state, review, repository isolation, evidence, and human control. BMAD terminology does not override the Scrum definitions above.

@@ -12,7 +12,7 @@ The API can describe Products, Product Goals, persistent Features, Briefs, class
 
 ## Work
 
-1. Record the terminology decision and map existing `projects`, `workstreams`, work items, sessions, artifacts, stories, approvals, and integrations onto it without destructive migration.
+1. Record the terminology decision and map existing `projects`, `workstreams`, work items, sessions, artifacts, stories, approvals, and integrations onto it without destructive migration. Show the intake object as a Brief until it is classified; keep Delivery Case as control-plane language.
 2. Add first-class Features as durable product capabilities linked to goals, Briefs, Epics, evidence, and Increments; closing an Epic must not close its Feature.
 3. Add durable human-readable slugs for Products, Features, and delivery cases, with collision handling and immutable IDs retained internally.
 4. Preserve the original intent as a Brief and add a concise current summary that can evolve without rewriting the Brief.
@@ -31,6 +31,7 @@ The API can describe Products, Product Goals, persistent Features, Briefs, class
 - `Read stories.yaml` is ineligible because no story inventory exists, with a human-readable prerequisite.
 - Direct, epic, project-sized, and specialist fixtures produce distinct stage maps.
 - Existing opaque IDs and audit references remain valid after slugs are added.
+- A newly submitted request appears as a Brief and does not introduce a user-facing Work entity.
 - The TTS Epic links to a persistent Long-form TTS Feature, and completing the Epic leaves that Feature active in the Product.
 - No frontend rule needs to infer a stage from `hasSpec` or `hasStories`.
 

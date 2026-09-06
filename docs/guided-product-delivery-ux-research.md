@@ -126,14 +126,16 @@ The server must project, for each Delivery Case:
 
 This projection cannot be reconstructed independently by React from “does a spec exist?” and “do stories exist?”. The backend owns lifecycle truth; the PWA renders it.
 
-## Open product decisions
+## Product policy from the Scrum comparison
 
-The epic proceeds with provisional choices, but the following questions remain for the Product Owner:
-
-1. Should the neutral intake/execution container appear as **Work**, **Delivery**, or **Initiative** before BMAD classifies it as a Change, Epic, Product initiative, Research, or Correction?
-2. Should MIC support explicit calendar/timeboxed Sprints now, or first present BMAD's existing `stories.yaml` and `sprint-status.yaml` faithfully while reserving the Scrum Sprint model for a later increment?
-3. After a human accepts an artifact, should MIC only reveal the next recommended action, or may a per-delivery automation policy start selected low-risk transitions automatically?
-4. Should document review replace the centre workspace or enter a distraction-free full-screen review route? The epic assumes a centre workspace with an optional full-screen mode.
+1. Before classification, the user-facing object is a **Brief**. **Start work** may be the creation action, but Work does not become another domain object. The internal Delivery Case container stays out of the primary product language.
+2. Each Product has one active Product Goal. MIC retains proposed, achieved, and abandoned goals as history.
+3. MIC models real Sprints as fixed timeboxes of one month or less, with a Sprint Goal, selected PBIs, a delivery plan, and resulting Increments. BMAD `stories.yaml` and `sprint-status.yaml` remain planning and tracking inputs; neither creates a Scrum Sprint by itself.
+4. Every Product has an explicit Definition of Done. A completed Build or accepted artifact counts toward an Increment only when the resulting product work meets it.
+5. Scrum accountabilities remain human accountabilities. MIC and BMAD assist the Product Owner and Developers but do not silently assume product authority. In a personal workflow one person may perform several accountabilities, and the UI must still identify which decision is being made.
+6. Accepting a BMAD planning artifact records that exact decision and reveals the next recommended refinement or delivery action. The default policy does not silently start model work; optional automation may be added later with the same transparency and eligibility rules.
+7. Artifact review uses the centre workspace with an optional distraction-free full-screen mode. This is a UX decision rather than a Scrum rule.
+8. MIC distinguishes a Scrum Sprint Review and Sprint Retrospective from BMAD artifact approval and BMAD Epic Retrospective. The labels must always name the scope and purpose.
 
 ## Delivery plan
 

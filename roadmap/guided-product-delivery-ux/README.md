@@ -94,7 +94,7 @@ Review, evidence, walkthrough, retrospective, and integration appear as guided s
 
 ## Non-goals
 
-- Implementing every formal Scrum event or replacing a team collaboration product.
+- Replacing a team collaboration product or inventing ceremonies beyond Scrum's defined events.
 - Adding estimation, velocity, time tracking, or capacity forecasting before real user need is established.
 - Rewriting BMAD workflows or inventing artifact contracts BMAD does not produce.
 - Styling polish without information-architecture or interaction value.
@@ -102,7 +102,7 @@ Review, evidence, walkthrough, retrospective, and integration appear as guided s
 
 ## Delivery epics
 
-These are backlog structure, not a Sprint schedule. Each epic must be refined into stories. Actual Sprints later select ready stories across these epics around one Sprint Goal.
+These are backlog structure, not a Sprint schedule. Each Epic must be refined into PBIs. Actual Sprints select ready PBIs across these Epics around one Sprint Goal and produce usable Increments meeting the Product's Definition of Done.
 
 
 1. [Epic 01 – Product Language and Lifecycle Truth](./epic-01-product-language-and-lifecycle-truth.md)
