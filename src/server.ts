@@ -11,7 +11,7 @@ export async function startMic(config: MicConfig) {
   const runtime = new OutboxRuntime(db, config.databaseUrl);
   await runtime.start();
   const timer = setInterval(() => runtime.dispatchBatch().catch(error => console.error('outbox:', error)), 250);
-  const executor = new ProjectExecutionService(db, process.env.MIC_MODEL ?? 'llama.cpp/Qwen3.8-27b-q8');
+  const executor = new ProjectExecutionService(db, process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16');
   const app = createApp(db, executor);
   await app.listen({ host: config.host, port: config.port });
   console.log(`MIC ready: http://${config.host}:${config.port} (API docs: http://${config.host}:${config.port}/docs/)`);

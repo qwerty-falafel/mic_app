@@ -1,7 +1,7 @@
 const models = new Map([
-  ['coding:standard', 'llama.cpp/Qwen3.8-27b-q8'],
-  ['coding:senior', 'llama.cpp/Qwen3.8-27b-q8'],
-  ['analysis:standard', 'llama.cpp/Qwen3.8-27b-q8'],
+  ['coding:standard', 'llama.cpp/gpt-oss-120b-F16'],
+  ['coding:senior', 'llama.cpp/gpt-oss-120b-F16'],
+  ['analysis:standard', 'llama.cpp/gpt-oss-120b-F16'],
 ]);
 export function selectModel(capability: string, tier: string) {
   const model = models.get(`${capability}:${tier}`);

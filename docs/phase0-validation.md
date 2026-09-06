@@ -5,6 +5,8 @@ Run: `2026-09-05T15-40-21-914Z-131b1d05`
 Model: `llama.cpp/Qwen3.8-27b-q8`
 Router: `http://127.0.0.1:10000`
 
+This report is a historical capture of the Qwen-based validation run. The current MIC default is `llama.cpp/gpt-oss-120b-F16`; new validation and execution runs should use GPT-OSS 120B unless `MIC_MODEL` is deliberately overridden.
+
 **Decision: SUFFICIENT TO PROCEED WITH DEFERRED VALIDATION.**
 The matrix remains an accurate record of which automated contracts were and were not validated.
 
@@ -52,7 +54,7 @@ Observed versions: BMAD installation/BMM `6.12.0`, OpenCode `1.18.27`, bmad-loop
 npm ci
 npm run build
 npm test
-npm run phase0 -- --live --model llama.cpp/Qwen3.8-27b-q8 --timeout-ms 900000
+npm run phase0 -- --live --model llama.cpp/gpt-oss-120b-F16 --timeout-ms 900000
 ```
 
 Omit `--live` for discovery only; discovery deliberately exits nonzero because execution is unvalidated.

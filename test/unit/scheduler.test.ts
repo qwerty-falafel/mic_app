@@ -9,6 +9,7 @@ describe('minimal gates and admission', () => {
   });
   it('selects explicitly and rejects unsafe admission', () => {
     const model = selectModel('coding', 'standard');
+    expect(model).toBe('llama.cpp/gpt-oss-120b-F16');
     expect(() => selectModel('vision', 'senior')).toThrow('No model configured');
     expect(canAcceptRun({ availableMiB: 50000, totalMiB: 120000, swapInUseMiB: 0, modelBusy: false, modelId: model }, model)).toBe(true);
     expect(canAcceptRun({ availableMiB: 100, totalMiB: 120000, swapInUseMiB: 0, modelBusy: false }, model)).toBe(false);

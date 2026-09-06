@@ -2,7 +2,7 @@
 
 **Status:** Implementation-grade — ready for Michael's review/approval (REVISED: BMAD adoption)
 **Created:** 2026-09-02
-**Updated:** 2026-09-02 (architecture pivot: adopt BMAD Method as the development protocol; LangGraph demoted to optional — see §3)
+**Updated:** 2026-09-06 (GPT-OSS 120B F16 selected as the normal default model)
 **Scope:** Build the MIC control plane, queue/scheduler, harness runner, and supporting infrastructure on `themachine`. MIC no longer implements the software-development protocol itself; it drives **BMAD Method** (planning / spec / build / review / retro) and **bmad-loop** (unattended epics) through the **OpenCode** coding harness, on local **llama.cpp** models.
 
 **What changed vs. v1 (this revision).** The original plan had MIC run a custom
@@ -34,7 +34,7 @@ The plan has two layers:
 The plan is implementation-grade: every phase names the exact deliverable, the
 owner, and how it is verified. The one deliberate exception is **Phase 0 (the
 BMAD pilot, §3.7 / §18)**, which is a *spike* — its deliverable is a written
-assessment of whether the local model (Qwen3.8-27B Q8) can run BMAD workflows
+assessment of whether the local model (GPT-OSS 120B F16) can run BMAD workflows
 reliably under OpenCode, not production code.
 
 ## 2. Current State Audit
@@ -51,7 +51,7 @@ What I found on `themachine` as of 2026-09-02:
 | Git | 2.53.0 | Ready |
 | ROCm | Installed, `rocm-smi` functional | GPU visible as device 0x1586 |
 | llama.cpp | Source at `~/src/llama.cpp`, **built** with HIP | `build-rocm/bin/llama-server` works; OpenAI-compatible HTTP; flags include `--host/--port/--alias/--parallel/--jinja/--no-webui/--n-cpu-moe/--api-key/--tools` |
-| Models | **Qwen models not downloaded** | Only repo vocab `.gguf` stubs + a `DeepSeek-R1-Distill-Llama-70B-Q8` shard in `~/Downloads`; Phase 2 pulls Qwen3.8-27B Q8 |
+| Models | **GPT-OSS 120B F16 installed** | `/srv/models/gpt-oss-120b/gpt-oss-120b-F16.gguf`; this is MIC's approved default |
 | Node.js | **Installed** — Node 22.22.1 (`/usr/bin/node`) | Meets pg-boss's `>=22.12.0` and BMAD's Node 20.12+ install requirement; no nvm needed |
 | PostgreSQL | **Not installed** | No server, no client |
 | Docker | **Not installed** | Not needed for this architecture |
@@ -70,11 +70,11 @@ What I found on `themachine` as of 2026-09-02:
   and bmad-loop (Python 3.11–3.14). There is no Node/Python install step.
 - **PostgreSQL is the remaining infra gap.** I install it in Phase 1 (after the
   Phase 0 BMAD pilot, which needs only the already-present model plane + OpenCode).
-- **No Qwen models.** The model plane (Phase 2) starts by downloading
-  Qwen3.8-27B Q8; nothing useful is on disk yet — and it is a *hard* prerequisite
-  for the Phase 0 pilot, because the pilot is about the local model's reliability.
-- **llama.cpp is ready:** The binary is built. I just need models and a
-  config to run it.
+- **The default model is GPT-OSS 120B F16.** It is installed and advertised by
+  the llama.cpp model router as `gpt-oss-120b-F16`. Qwen is not the normal MIC
+  default.
+- **llama.cpp is ready:** The binary, model preset, and single-slot model router
+  are present.
 
 ## 3. Architecture (Revised): MIC Control Plane + BMAD Development Protocol
 
@@ -109,7 +109,7 @@ implement the software-development method — that is delegated:
 +------------------------------+
 | MODEL PLANE                  |
 |  llama.cpp (llama-server)    |
-|  Qwen3.8-27B Q8 (default)    |
+|  GPT-OSS 120B F16 (default)  |
 |  Qwen3-VL:32B (vision, opt.) |
 +------------------------------+
 ```
@@ -215,9 +215,8 @@ exactly the seam between MIC and the adopted protocol.
 
 ### 3.6 Risks & open questions (the honest part)
 
-1. **Local-model reliability (HIGHEST).** All of this assumes Qwen3.8-27B Q8
-   can follow BMAD's prompts (spec, build, review) well enough. A frontier model
-   doing BMAD ≠ a 27B Q8 doing BMAD. **This is why Phase 0 is a hard gate** — we
+1. **Local-model reliability (HIGHEST).** All of this assumes GPT-OSS 120B F16
+   can follow BMAD's prompts (spec, build, review) well enough. **This is why Phase 0 is a hard gate** — we
    test the real model under real BMAD skills before building the control plane
    on the assumption.
 2. **bmad-loop is pre-1.0.** It is beta and moving fast. We **pin a known
@@ -238,7 +237,7 @@ exactly the seam between MIC and the adopted protocol.
    Those are the (deferred) case for a custom LangGraph/agent workflow driven by
    the same harness-runner pattern — out of scope for the pilot.
 6. **Model is single-slot by default.** llama.cpp serves one model; switching
-   Q8↔32B costs a reload. MIC's model scheduler (§11) must batch same-model
+   between the default and an optional specialist model costs a reload. MIC's model scheduler (§11) must batch same-model
    work to amortize reloads and never leave a story stuck waiting for a model
    swap mid-run.
 
@@ -248,10 +247,10 @@ Before writing control-plane code, we run a manual, end-to-end pilot. It is a
 spike — the deliverable is a written assessment, not production code.
 
 Steps (all on the already-present stack: llama.cpp + models + OpenCode):
-1. **Download Qwen3.8-27B Q8** (and record llama-server startup time).
+1. **Load GPT-OSS 120B F16** through the model router (and record startup time).
 2. **`npx bmad-method install`** into a scratch copy of `parliament_people_product_development` (or a
    throwaway repo). Apply a minimal `_bmad/custom` config (persona/principles).
-3. **Manual BMAD Build** with OpenCode + Qwen3.8 Q8: run `bmad-spec` on a small
+3. **Manual BMAD Build** with OpenCode + GPT-OSS 120B F16: run `bmad-spec` on a small
    real feature, then `bmad-build-auto` on the first story. Observe: does the
    model follow the method? Does it produce a compiling change + tests? How
    long? How many retries?
@@ -269,7 +268,7 @@ Steps (all on the already-present stack: llama.cpp + models + OpenCode):
   monitor it — not assumed.
 - `blocked` semantics are understood and reproducible (what triggers it, how
   single-agent fallback behaves).
-- A model-timing profile is captured (spec vs build vs review; Q8 vs 32B) to
+- A model-timing profile is captured (spec vs build vs review) to
   drive the model router (§11).
 - **If the local model cannot do this reliably, we stop and decide:** a bigger
   local model, a different local model, or a hybrid (local for build, cloud for
@@ -310,7 +309,7 @@ INTAKE → PLANNING → SPEC_READY → AWAITING_IMPLEMENTATION_APPROVAL
 | **ORM / schema** | **Drizzle ORM** (TypeScript) | Type-safe, SQL-first, plays well with pg-boss; migrations in-repo |
 | **Job queue / scheduler** | **pg-boss** | Runs on Postgres; priorities, retries, DLQ, cron, scheduling |
 | **Model plane** | **llama.cpp** (`llama-server`, OpenAI-compat HTTP) | Already built with HIP (ROCm); OpenCode + BMAD agents call it |
-| **Models** | Qwen3.8-27B Q8 (default) + Qwen3-VL:32B (vision, opt.) | Q8 (~17 GB) fits the APU's unified 122 GB memory |
+| **Models** | GPT-OSS 120B F16 (default); specialist models optional | The installed 61 GiB GGUF fits the APU's unified 122 GB memory; admission still checks live resources |
 | **Frontend (PWA)** | **React + Vite + TypeScript** | Fast, typed, easy PWA |
 | **Realtime** | **SSE** (server→client) | One-directional; no WS infra needed |
 | **Voice** | **Whisper** (STT) + a local TTS (e.g. Piper) | STT local; TTS local for privacy |
@@ -359,7 +358,7 @@ create table projects (
   name          text not null,
   repo_path     text not null,           -- e.g. /home/michael/projects/parliament_people_product_development
   base_branch   text not null default 'main',
-  default_model text not null default 'qwen3.8-27b-q8',
+  default_model text not null default 'gpt-oss-120b-F16',
   bmad_configured boolean not null default false,  -- has _bmad/custom been applied?
   created_at    timestamptz not null default now()
 );
@@ -656,14 +655,14 @@ it; MIC's router decides *which* model is loaded.
 ### 8.1 Models
 | Model | Quant | Size | Use | Notes |
 |-------|-------|------|-----|-------|
-| **Qwen3.8-27B** | Q8 | ~17 GB | Default: spec/build/review | Fits the APU's unified 122 GB memory |
+| **GPT-OSS 120B** | F16 preset | 61 GiB GGUF | Default: spec/build/review | Approved normal MIC model; fits unified memory subject to admission checks |
 | Qwen3-VL:32B | (per availability) | large | Vision (screenshots, UI) | Optional; loaded on demand |
 
 ### 8.2 Server (systemd service)
 ```bash
-# ~/.mic/models/ holds .gguf files
+# The installed model is /srv/models/gpt-oss-120b/gpt-oss-120b-F16.gguf
 llama-server \
-  -m ~/.mic/models/Qwen3.8-27B-Q8.gguf \
+  -m /srv/models/gpt-oss-120b/gpt-oss-120b-F16.gguf \
   --port 8080 --host 127.0.0.1 \
   -ngl 99 \                    # offload all layers to the APU (ROCm/HIP)
   -c 32768 \                   # context (fit to the unified memory pool; tune in pilot)
@@ -680,7 +679,7 @@ llama-server \
 
 ### 8.3 How OpenCode / BMAD reach it
 OpenCode is configured with an OpenAI-compatible provider pointing at
-`http://127.0.0.1:8080/v1`, model name `qwen3.8-27b-q8`. BMAD's prompts run as
+`http://127.0.0.1:10000/v1`, model name `gpt-oss-120b-F16`. BMAD's prompts run as
 OpenCode sessions, so they use this endpoint transparently. No cloud API key —
 a local token only.
 
@@ -1044,11 +1043,10 @@ The system is "done" for v1 when, end to end, on the local stack:
 
 ```bash
 # --- Model plane ---
-mkdir -p ~/.mic/models
-# download the Qwen3.8-27B Q8 gguf to ~/.mic/models/ (HuggingFace)
-llama-server -m ~/.mic/models/Qwen3.8-27B-Q8.gguf --port 8080 --host 127.0.0.1 \
-  -ngl 99 -c 32768 --jinja
-curl -s http://127.0.0.1:8080/v1/models
+# The router preset names gpt-oss-120b-F16 as MIC's default model.
+llama-server --models-preset /srv/ai/llama-models.ini --models-max 1 \
+  --host 127.0.0.1 --port 10000
+curl -s http://127.0.0.1:10000/v1/models
 
 # --- PostgreSQL ---
 sudo apt-get install -y postgresql postgresql-contrib
@@ -1081,6 +1079,6 @@ opencode run <bmad-build-auto> --story 01 --spec path/to/spec.md
 - **TEA** (`bmad-method-test-architecture-enterprise`) — headless
   `PASS / CONCERNS / FAIL / WAIVED` + exit codes (optional, for gates).
 - **Environment (verified on `themachine`):** Python 3.14.4, `uv`, git 2.53,
-  Node 22.22.1, llama.cpp built, no Qwen models yet.
+  Node 22.22.1, llama.cpp built, GPT-OSS 120B F16 installed.
 - BMAD core is installable + customizable **without editing upstream files**
   (`_bmad/custom` config, persistent facts, org rules, artifact locations).
