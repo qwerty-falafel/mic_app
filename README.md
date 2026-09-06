@@ -2,7 +2,7 @@
 
 This repository contains the executable Morgan's Intelligent Control (MIC) application: its API, PWA, database schema and migrations, tests, BMAD/OpenCode integration, and local operating scripts.
 
-Product policy, assessments, architecture direction, epics, Sprints, and delivery evidence live in the sibling [`../mic_product_development`](../mic_product_development) repository. The active work is the [Guided Product Delivery UX Epic](../mic_product_development/epics/guided-product-delivery-ux.md), currently in [Sprint 02](../mic_product_development/sprints/guided-product-delivery-ux/sprint-02-route-backed-application-shell.md). MIC's canonical vocabulary is [Scrum and Product Terminology](../mic_product_development/policy/scrum-and-product-terminology.md).
+Product policy, assessments, architecture direction, epics, Sprints, and delivery evidence live in the sibling [`../mic_product_development`](../mic_product_development) repository. The active work is the [Guided Product Delivery UX Epic](../mic_product_development/epics/001-guided-product-delivery-ux.md), currently in [Sprint 03](../mic_product_development/sprints/001-guided-product-delivery-ux/sprint-03-guided-delivery-workspace.md). MIC's canonical vocabulary is [Scrum and Product Terminology](../mic_product_development/policy/scrum-and-product-terminology.md).
 
 The physical machine's hardware and host configuration are documented separately in [`../machine_setup`](../machine_setup). MIC does not own that machine configuration.
 
