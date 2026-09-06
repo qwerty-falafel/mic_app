@@ -28,8 +28,12 @@ Migration 0007 adds ordered story units and integration decisions. MIC reads the
 
 - TypeScript backend build: pass.
 - React TypeScript check and production Vite build: pass.
-- Automated suite: 34 tests pass, including restart persistence, idempotent kernel commands, revision-bound legacy approvals, blocked-question persistence, generic named-skill dispatch, OpenCode session continuation, artifact parsing, immutable revision review and memlog quarantine.
+- Automated suite: 35 tests pass, including restart persistence, idempotent kernel commands, revision-bound legacy approvals, blocked-question persistence, generic named-skill dispatch, OpenCode session continuation, pause/cancel race protection, artifact parsing, immutable revision review and memlog quarantine.
 - Live HTTP smoke: health, PWA asset, catalog health, effective attached-project paths, attention and queue/resource status respond at `127.0.0.1:3100`.
 - TTS base repository: clean at `68424548a10d86c1bdbd330e0222def1e2c9aa3e`.
 
 The remaining validation is intentionally product-facing: complete a real interactive BMAD session through the PWA, rehearse story delivery, then run the fresh TTS workstream through planning and stop for Michael's artifact review. These are acceptance runs of implemented capabilities rather than hidden infrastructure tasks.
+
+## First live usability correction
+
+The first browser session exposed a pause race: MIC stored `PAUSED`, sent `SIGTERM`, then interpreted OpenCode's resulting signal as a user cancellation. The session was recovered from its audit event with its original provider session ID and resumed successfully. Terminal observation now preserves prior `PAUSED`, `CANCELLED` and `INTERRUPTED` control states. Graceful MIC shutdown also interrupts active children explicitly so restart cannot leave an untracked OpenCode process editing the worktree.
