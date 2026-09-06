@@ -146,8 +146,8 @@ describe('durable MIC kernel', () => {
       expect(revised.artifactHash).not.toBe(planned.artifactHash);
       await expect(lifecycle.recordPlanningApproval(item.id, planned.artifactHash, 'Michael')).rejects.toThrow('latest persisted artifact hash');
       await lifecycle.recordPlanningApproval(item.id, revised.artifactHash, 'Michael');
-      await lifecycle.runTechnicalDiscovery(item.id, { risks: [] });
-      const implemented = await lifecycle.runImplementation(item.id);
+      await lifecycle.runTechnicalDiscovery(item.id, { architecture: 'Accepted feature architecture', risks: [] });
+      const implemented = await lifecycle.runImplementation(item.id, { type: 'story', specFolder: 'specs/vertical-slice', storyId: '1' });
       if (!('artifactHash' in implemented)) throw new Error('Implementation unexpectedly blocked');
       const done = await lifecycle.recordImplementationApproval(item.id, implemented.artifactHash, 'Michael');
 

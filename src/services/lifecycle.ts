@@ -5,7 +5,8 @@ import { approvals, auditEvents, discoveryRecords, implementationArtifacts, outb
 import { Kernel } from '../kernel.js';
 import type { RunResult } from '../types.js';
 
-type State = 'INTAKE' | 'PLANNING_GRADE' | 'AWAITING_PLANNING_APPROVAL' | 'TECHNICAL_DISCOVERY' | 'IMPLEMENTATION_GRADE' | 'AWAITING_IMPLEMENTATION_APPROVAL' | 'BLOCKED' | 'DONE';
+type State = 'INTAKE' | 'PLANNING_GRADE' | 'AWAITING_PLANNING_APPROVAL' | 'TECHNICAL_DISCOVERY' | 'IMPLEMENTATION_GRADE' | 'AWAITING_IMPLEMENTATION_APPROVAL' | 'BLOCKED' | 'PAUSED' | 'DONE';
+export type BuildTarget = { type: 'direct'; intent: string } | { type: 'spec'; path: string } | { type: 'story'; specFolder: string; storyId: string };
 export interface LifecycleExecutor {
   execute(input: { mode: 'planning' | 'implementation'; runId: string; workItemId: string; intent: string }): Promise<RunResult>;
   finalize?(workItemId: string, result: RunResult): Promise<void>;
@@ -91,16 +92,18 @@ export class LifecycleService {
   }
 
   async runTechnicalDiscovery(workItemId: string, data: Record<string, unknown>) {
+    if (Object.keys(data).length === 0) throw new Error('Technical discovery cannot be completed without recorded findings');
     await this.db.insert(technicalRecords).values({ id: `technical_${randomUUID()}`, workItemId, data }).onConflictDoUpdate({ target: technicalRecords.workItemId, set: { data } });
     return this.transition(workItemId, 'TECHNICAL_DISCOVERY', 'IMPLEMENTATION_GRADE', 'technical-discovery.completed');
   }
 
-  async runImplementation(workItemId: string) {
+  async runImplementation(workItemId: string, target: BuildTarget) {
     const item = await this.state(workItemId);
     if (item.state !== 'IMPLEMENTATION_GRADE') throw new Error(`Invalid transition: expected IMPLEMENTATION_GRADE, found ${item.state}`);
     const run = await this.kernel.createRun({ workItemId, kind: 'implementation', status: 'RUNNING' }, `${workItemId}:implementation`);
     let result: RunResult;
-    try { result = await this.executor.execute({ mode: 'implementation', runId: run.id, workItemId, intent: item.intent }); }
+    const dispatchIntent = target.type === 'direct' ? target.intent : target.type === 'spec' ? `Implement the approved BMAD spec at ${target.path}.` : `Implement story ${target.storyId} from BMAD spec folder ${target.specFolder}.`;
+    try { result = await this.executor.execute({ mode: 'implementation', runId: run.id, workItemId, intent: dispatchIntent }); }
     catch (error) { await this.db.update(runs).set({ status: 'FAILED', result: { error: String(error) }, updatedAt: new Date() }).where(eq(runs.id, run.id)); throw error; }
     await this.db.update(runs).set({ status: result.status.toUpperCase(), result, baselineRevision: result.repositoryRevisions.baseline, resultRevision: result.repositoryRevisions.result, updatedAt: new Date() }).where(eq(runs.id, run.id));
     if (result.status === 'blocked') return this.block(workItemId, run.id, 'IMPLEMENTATION_GRADE', result);
@@ -135,5 +138,11 @@ export class LifecycleService {
     if (!resumeState) throw new Error('Question has no resume state');
     await this.db.update(questions).set({ answer, status: 'ANSWERED', answeredAt: new Date() }).where(eq(questions.id, questionId));
     return this.transition(question.workItemId, 'BLOCKED', resumeState, 'question.answered', { questionId, actor });
+  }
+
+  async pause(workItemId: string, reason: string, actor: string) {
+    const item = await this.state(workItemId);
+    if (item.state === 'DONE' || item.state === 'PAUSED') throw new Error(`Invalid transition: cannot pause from ${item.state}`);
+    return this.transition(workItemId, item.state as State, 'PAUSED', 'work.paused', { reason, actor });
   }
 }
