@@ -815,7 +815,7 @@ around it.
   versions → pin BMAD + bmad-loop versions (§13) and keep the parser in one
   place with a test against a captured fixture.
 - `blocked: no subagents` is the local-harness compatibility risk — the pilot
-  (§3.7) must confirm whether OpenCode+Qwen exposes subagents to BMAD, and how
+  (§3.7) must confirm whether OpenCode with the default GPT-OSS 120B exposes subagents to BMAD, and how
   to fall back to single-agent build.
 - Fresh context per story is the win; the cost is that BMAD re-reads the repo
   each run (fine — it's local and cheap).

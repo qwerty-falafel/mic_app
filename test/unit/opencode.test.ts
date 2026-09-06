@@ -49,4 +49,16 @@ describe('OpenCodeAdapter', () => {
     expect(observation.status).toBe('done');
     expect(observation.stdout.trim().split('\n')).toEqual(expect.arrayContaining(['--command', 'bmad-spec', 'feature intent']));
   });
+
+  it('continues the provider session without invoking the named command again', async () => {
+    root = await mkdtemp(resolve(tmpdir(), 'mic-opencode-session-'));
+    const executable = resolve(root, 'opencode');
+    await writeFile(executable, '#!/bin/sh\nprintf "%s\\n" "$@"\n');
+    await chmod(executable, 0o755); process.env.PATH = `${root}${delimiter}${originalPath}`;
+    const adapter = new OpenCodeAdapter();
+    adapter.dispatch({ runId: 'continued-run', cwd: root, model: 'test/model', sessionId: 'ses_123', prompt: 'My answer' });
+    const args = (await adapter.observe('continued-run', true)).stdout.trim().split('\n');
+    expect(args).toEqual(expect.arrayContaining(['--session', 'ses_123', 'My answer']));
+    expect(args).not.toContain('--command');
+  });
 });

@@ -1,0 +1,2 @@
+ALTER TABLE "conversation_turns" ADD COLUMN "command_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "conversation_turn_session_command_idx" ON "conversation_turns" USING btree ("session_id","command_key");

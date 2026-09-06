@@ -1,16 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import EmbeddedPostgres from 'embedded-postgres';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 import { and, eq, sql } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
-import { approvals, auditEvents, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, questions, workItems } from '../../src/db/schema.js';
+import { approvals, artifactRevisions, auditEvents, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, questions, workItems, workstreams } from '../../src/db/schema.js';
 import { OutboxRuntime } from '../../src/dispatcher.js';
 import { Kernel } from '../../src/kernel.js';
 import { LifecycleService } from '../../src/services/lifecycle.js';
+import { ArtifactService } from '../../src/services/artifacts.js';
+import { WorkstreamService } from '../../src/services/workstreams.js';
 
 async function freePort() {
   return new Promise<number>((resolvePort, reject) => {
@@ -68,6 +71,11 @@ describe('durable MIC kernel', () => {
     expect(repeated.json()).toEqual(created.json());
     const workItem = created.json<{ id: string }>();
     const repository = (await firstApp.inject({ method: 'POST', url: `/projects/${project.id}/repositories`, headers: { 'idempotency-key': 'acceptance-repository' }, payload: { path: '/tmp/acceptance.git' } })).json<{ id: string }>();
+    const refreshed = await firstApp.inject({ method: 'POST', url: `/repositories/${repository.id}/bmad/refresh` });
+    expect(refreshed.statusCode).toBe(200);
+    expect(refreshed.json<{ count: number }>().count).toBeGreaterThan(10);
+    const workstream = (await firstApp.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'acceptance-workstream' }, payload: { projectId: project.id, repositoryId: repository.id, legacyWorkItemId: workItem.id, title: 'Native flow', intent: 'Exercise BMAD', path: 'spec-epic' } })).json<{ id: string }>();
+    expect((await firstApp.inject({ method: 'GET', url: `/workstreams/${workstream.id}/operations` })).json<any[]>()).toEqual(expect.arrayContaining([expect.objectContaining({ skill: 'bmad-spec' })]));
     const run = (await firstApp.inject({ method: 'POST', url: '/runs', headers: { 'idempotency-key': 'acceptance-run' }, payload: { workItemId: workItem.id, kind: 'planning', baselineRevision: 'abc123' } })).json<{ id: string }>();
     const question = (await firstApp.inject({ method: 'POST', url: '/questions', headers: { 'idempotency-key': 'acceptance-question' }, payload: { workItemId: workItem.id, runId: run.id, question: 'Proceed?' } })).json<{ id: string }>();
     expect((await firstApp.inject({ method: 'GET', url: '/system/status' })).statusCode).toBe(200);
@@ -90,6 +98,8 @@ describe('durable MIC kernel', () => {
     for (const [path, entityId] of [['projects', project.id], ['repositories', repository.id], ['runs', run.id], ['questions', question.id]]) {
       expect((await secondApp.inject({ method: 'GET', url: `/${path}/${entityId}` })).statusCode).toBe(200);
     }
+    expect((await secondApp.inject({ method: 'GET', url: `/workstreams?projectId=${project.id}` })).json()).toEqual([expect.objectContaining({ id: workstream.id, legacyWorkItemId: workItem.id })]);
+    expect(await second.db.select().from(auditEvents).where(eq(auditEvents.idempotencyKey, 'workstream:acceptance-workstream:audit'))).toHaveLength(1);
 
     const runtime = new OutboxRuntime(second.db, databaseUrl);
     await runtime.start();
@@ -176,5 +186,31 @@ describe('durable MIC kernel', () => {
       const resumed = await lifecycle.answerQuestion(question!.id, 'Use the supported path', 'Michael');
       expect(resumed.state).toBe('PLANNING_GRADE');
     } finally { await connection.pool.end(); }
+  }, 30_000);
+
+  it('keeps artifact revisions immutable and quarantines rewritten memlog history', async () => {
+    const connection = createDatabase(databaseUrl), root = resolve('.runtime', `artifact-fixture-${Date.now()}`);
+    mkdirSync(resolve(root, '_bmad-output/specs/pilot'), { recursive: true });
+    execFileSync('git', ['init', '-b', 'main'], { cwd: root });
+    writeFileSync(resolve(root, 'README.md'), '# artifact fixture\n');
+    execFileSync('git', ['add', '.'], { cwd: root }); execFileSync('git', ['-c', 'user.name=MIC Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'seed'], { cwd: root });
+    const kernel = new Kernel(connection.db), service = new ArtifactService(connection.db), streams = new WorkstreamService(connection.db);
+    try {
+      const project = await kernel.createProject({ name: 'Artifact project' }, `artifact-project-${Date.now()}`);
+      const repository = await kernel.createRepository({ projectId: project.id, path: root, baseBranch: 'main' }, `artifact-repository-${Date.now()}`);
+      const stream = await streams.create({ projectId: project.id, repositoryId: repository.id, title: 'Artifact revisions', intent: 'Validate immutable review', path: 'spec-epic' }, `artifact-stream-${Date.now()}`);
+      await connection.db.update(workstreams).set({ workspacePath: root, baselineRevision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() }).where(eq(workstreams.id, stream!.id));
+      const folder = resolve(root, '_bmad-output/specs/pilot');
+      writeFileSync(resolve(folder, '.memlog.md'), '# Decisions\n- Initial boundary\n');
+      writeFileSync(resolve(folder, 'SPEC.md'), '---\nstatus: draft\n---\n# Pilot\n');
+      await service.index(stream!.id);
+      const [first] = await connection.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, stream!.id), eq(artifactRevisions.type, 'spec')));
+      writeFileSync(resolve(folder, 'SPEC.md'), '---\nstatus: ready-for-dev\n---\n# Pilot\nApproved details\n');
+      writeFileSync(resolve(folder, '.memlog.md'), '# Rewritten decisions\n- Different history\n');
+      const indexed = await service.index(stream!.id);
+      expect(indexed.invalid).toBe(1);
+      await expect(service.review(first!.id, { kind: 'accepted', actor: 'Michael' })).rejects.toThrow('latest artifact revision');
+      expect((await service.list(stream!.id)).filter(row => row.path.endsWith('.memlog.md')).some(row => row.status === 'quarantined')).toBe(true);
+    } finally { await connection.pool.end(); rmSync(root, { recursive: true, force: true }); }
   }, 30_000);
 });

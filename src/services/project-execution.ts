@@ -22,7 +22,7 @@ async function prepareBmadRuntime(worktree: string, repository: string) {
     return async () => {};
   } catch {}
   await cp(sharedBmadRoot, runtime, { recursive: true });
-  await writeFile(resolve(runtime, 'config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository))}\n`);
+  await writeFile(resolve(runtime, 'config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository))}\nuser_name = "Michael"\ncommunication_language = "English"\ndocument_output_language = "English"\n\n[modules.bmm]\nuser_skill_level = "intermediate"\n`);
   return () => rm(runtime, { recursive: true, force: true });
 }
 

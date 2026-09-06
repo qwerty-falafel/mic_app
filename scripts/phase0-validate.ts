@@ -13,7 +13,7 @@ interface Check { name: string; status: 'pass' | 'fail' | 'not-run'; detail: str
 export function validationPass(checks: Check[]): boolean { return checks.length > 0 && checks.every(c => c.status === 'pass'); }
 function json(path: string, value: unknown) { mkdirSync(resolve(path, '..'), { recursive: true }); writeFileSync(path, JSON.stringify(value, null, 2) + '\n'); }
 
-export async function validate(options: { root: string; live: boolean; timeoutMs: number; model?: string; router?: string }) {
+export async function validate(options: { root: string; live: boolean; timeoutMs: number; model?: string; router?: string; skipLoop?: boolean }) {
   const root = resolve(options.root);
   const runId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`;
   const output = join(root, 'test/fixtures/phase0', runId), scratch = join(root, '.phase0', runId);
@@ -141,7 +141,7 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
       writeFileSync(join(cwd, 'opencode.json'), JSON.stringify(scratchConfig, null, 2));
       // A combined BMM+GDS install contains duplicate shorthand keys. The pilot
       // exercises BMM, so give its renderer an intentionally minimal central config.
-      writeFileSync(join(cwd, '_bmad/config.toml'), `[core]\nproject_name = "mic-phase0-pilot"\ndocument_output_language = "English"\noutput_folder = "{project-root}/_bmad-output"\n\n[modules.bmm]\nplanning_artifacts = "{project-root}/_bmad-output/planning-artifacts"\nimplementation_artifacts = "{project-root}/_bmad-output/implementation-artifacts"\nproject_knowledge = "{project-root}/docs"\n`);
+      writeFileSync(join(cwd, '_bmad/config.toml'), `[core]\nproject_name = "mic-phase0-pilot"\nuser_name = "MIC Phase 0"\ncommunication_language = "English"\ndocument_output_language = "English"\noutput_folder = "{project-root}/_bmad-output"\n\n[modules.bmm]\nuser_skill_level = "intermediate"\nplanning_artifacts = "{project-root}/_bmad-output/planning-artifacts"\nimplementation_artifacts = "{project-root}/_bmad-output/implementation-artifacts"\nproject_knowledge = "{project-root}/docs"\n`);
       writeFileSync(join(cwd, '.gitignore'), '_bmad/render/\n_bmad/config.user.toml\n.bmad-loop/runs/\n.bmad-loop/cache/\nnode_modules/\n');
       writeFileSync(join(cwd, 'package.json'), '{"name":"mic-phase0-pilot","private":true,"type":"module","scripts":{"test":"node --test"}}\n');
       writeFileSync(join(cwd, 'README.md'), '# MIC Phase 0 arithmetic pilot\nNative JavaScript ES modules. No third-party dependencies.\n');
@@ -149,7 +149,7 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
       git(cwd, 'add', '.'); git(cwd, 'commit', '-m', 'Seed isolated Phase 0 pilot'); return cwd;
     };
     const scenarios: { result: CommandResult; contracts: { path: string; status: string; blockingCondition?: string; hasResult: boolean }[]; changed: ReturnType<typeof inventory> }[] = [];
-    const execute = async (name: string, cwd: string, prompt: string, agent?: string) => {
+    const execute = async (name: string, cwd: string, prompt: string, command?: string, agent?: string) => {
       console.log(`RUN ${name} (timeout ${options.timeoutMs / 1000}s)`);
       const before = inventory(cwd), baseline = git(cwd, 'rev-parse', 'HEAD');
       const scratchConfig = {
@@ -161,7 +161,7 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
         OPENCODE_CONFIG_CONTENT: JSON.stringify(scratchConfig),
         OPENCODE_DISABLE_EXTERNAL_SKILLS: 'true',
       };
-      const result = await run(name, ['opencode', 'run', '--dir', cwd, '--pure', '--format', 'json', '--model', model, '--auto', ...(agent ? ['--agent', agent] : []), prompt], cwd, options.timeoutMs, scratchEnv);
+      const result = await run(name, ['opencode', 'run', '--dir', cwd, '--pure', '--format', 'json', '--model', model, '--auto', ...(command ? ['--command', command] : []), ...(agent ? ['--agent', agent] : []), prompt], cwd, options.timeoutMs, scratchEnv);
       const after = inventory(cwd), changed = changedArtifacts(before, after);
       capture(cwd, join(output, name, 'artifacts'), changed);
       json(join(output, name, 'inventory.json'), { before, after, changed, deleted: before.filter(a => !after.some(b => b.path === a.path)), baselineRevision: baseline, resultRevision: git(cwd, 'rev-parse', 'HEAD'), gitStatus: git(cwd, 'status', '--porcelain') });
@@ -184,7 +184,7 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
       return reports();
     }
     const cwd = setup('direct');
-    const planning = await execute('planning', cwd, 'Use bmad-spec in headless mode. Slug: arithmetic-pilot. Intent: a dependency-free JavaScript ES module arithmetic.js exporting add(a,b), subtract(a,b), multiply(a,b), and divide(a,b) for finite numbers. divide throws RangeError for zero divisor. Tests use node:test. Non-goals: CLI, UI, persistence, arbitrary precision. Return generated artifact paths. Planning only; do not implement.');
+    const planning = await execute('planning', cwd, 'Slug: arithmetic-pilot. Intent: a dependency-free JavaScript ES module arithmetic.js exporting add(a,b), subtract(a,b), multiply(a,b), and divide(a,b) for finite numbers. divide throws RangeError for zero divisor. Tests use node:test. Non-goals: CLI, UI, persistence, arbitrary precision. Planning only; do not implement.', 'bmad-spec');
     const specFiles = planning.changed.filter(a => /\/SPEC\.md$/.test(a.path));
     const planningPassed = commandPass(planning.result) && specFiles.length === 1 && planning.changed.some(a => a.path.endsWith('/.memlog.md'));
     check('planning', planningPassed,
@@ -198,31 +198,36 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
       return reports();
     }
     git(cwd, 'add', '.'); git(cwd, 'commit', '--allow-empty', '-m', 'Capture planning result');
-    const supervised = await execute('supervised-plan', cwd, 'Use bmad-build-auto to implement this approved intent: export add(a,b) from arithmetic.js using JavaScript addition on finite numbers. Add node:test coverage for positive, negative and zero operands. No dependencies. Halt after planning.');
+    const supervised = await execute('supervised-plan', cwd, 'Implement this approved intent: export add(a,b) from arithmetic.js using JavaScript addition on finite numbers. Add node:test coverage for positive, negative and zero operands. No dependencies. Halt after planning.', 'bmad-build-auto');
     const readySpec = supervised.contracts.find(c => c.status === 'ready-for-dev');
     check('supervised-planning', commandPass(supervised.result) && !!readySpec, readySpec?.path ?? 'No ready-for-dev artifact', 'supervised-plan/observed-contracts.json');
     if (readySpec) {
       git(cwd, 'add', '.'); git(cwd, 'commit', '--allow-empty', '-m', 'Approve bounded arithmetic pilot spec');
-      const built = await execute('supervised-build', cwd, `Use bmad-build-auto on ${readySpec.path}. The bounded arithmetic pilot is approved. Follow the complete workflow.`);
+      const built = await execute('supervised-build', cwd, `Use ${readySpec.path}. The bounded arithmetic pilot is approved. Follow the complete workflow.`, 'bmad-build-auto');
       const verify = await run('supervised-verify', [process.execPath, '--input-type=module', '-e', "import assert from 'node:assert/strict'; import {add} from './arithmetic.js'; assert.equal(add(2,3),5); assert.equal(add(-3,2),-1); assert.equal(add(0,0),0);"], cwd);
       const tests = await run('supervised-tests', [process.execPath, '--test'], cwd);
       check('supervised-build', commandPass(built.result) && built.contracts.some(c => c.status === 'done' && c.hasResult) && commandPass(verify) && commandPass(tests), 'Requires durable done status, independent assertions and project tests', 'supervised-build/observed-contracts.json');
     } else skip('supervised-build', 'Planning did not reach ready-for-dev');
     const unattendedCwd = setup('unattended');
-    const unattended = await execute('unattended-build', unattendedCwd, 'Use bmad-build-auto for this approved pilot: create arithmetic.js exporting subtract(a,b) for finite numbers, with node:test tests for positive, negative and zero values. ES modules, no dependencies, no UI. Execute the full unattended workflow including verification and review.');
+    const unattended = await execute('unattended-build', unattendedCwd, 'Approved pilot: create arithmetic.js exporting subtract(a,b) for finite numbers, with node:test tests for positive, negative and zero values. ES modules, no dependencies, no UI. Execute the full unattended workflow including verification and review.', 'bmad-build-auto');
     const verify = await run('unattended-verify', [process.execPath, '--input-type=module', '-e', "import assert from 'node:assert/strict'; import {subtract} from './arithmetic.js'; assert.equal(subtract(5,3),2); assert.equal(subtract(-3,2),-5); assert.equal(subtract(0,0),0);"], unattendedCwd);
     const tests = await run('unattended-tests', [process.execPath, '--test'], unattendedCwd);
     check('unattended-build', commandPass(unattended.result) && unattended.contracts.some(c => c.status === 'done' && c.hasResult) && commandPass(verify) && commandPass(tests), 'Requires durable done status, independent assertions and project tests', 'unattended-build/observed-contracts.json');
     check('subagents', scenarios.some(s => hasCompletedSubagent(s.result.stdout)), 'Require completed task tool calls, not just agent listing', 'unattended-build/telemetry.json');
     const blockedCwd = setup('blocked');
-    const blocked = await execute('blocked', blockedCwd, 'Use bmad-build-auto to create arithmetic.js exporting add(a,b) with node:test tests. Follow the skill including its subagent requirement and HALT protocol.', 'phase0-no-subagents');
+    const blocked = await execute('blocked', blockedCwd, 'Create arithmetic.js exporting add(a,b) with node:test tests. Follow the skill including its subagent requirement and HALT protocol.', 'bmad-build-auto', 'phase0-no-subagents');
     check('blocked', commandPass(blocked.result) && blocked.contracts.some(c => c.status === 'blocked' && /no subagents/i.test(c.blockingCondition ?? '')), 'task disabled; require persisted blocked / no subagents payload', 'blocked/observed-contracts.json');
     const blockedSpec = blocked.contracts.find(c => c.status === 'blocked');
     if (blockedSpec) {
       git(blockedCwd, 'add', '.'); git(blockedCwd, 'commit', '--allow-empty', '-m', 'Preserve blocked evidence');
-      const recovery = await execute('blocked-recovery', blockedCwd, `Use bmad-build-auto on ${blockedSpec.path}. Subagents are now available. Follow the documented handling of this blocked artifact; do not fabricate success.`);
+      const recovery = await execute('blocked-recovery', blockedCwd, `Use ${blockedSpec.path}. Subagents are now available. Follow the documented handling of this blocked artifact; do not fabricate success.`, 'bmad-build-auto');
       check('blocked-recovery', commandPass(recovery.result) && recovery.contracts.some(c => ['blocked', 'done'].includes(c.status) && c.hasResult), 'Observe remediation required before re-dispatch', 'blocked-recovery/observed-contracts.json');
     } else skip('blocked-recovery', 'No blocked artifact to recover');
+    if (options.skipLoop) {
+      skip('loop-preflight', 'Skipped by --skip-loop'); skip('bmad-loop', 'Skipped by --skip-loop');
+      check('resource-profile', scenarios.length > 0 && scenarios.every(s => resourcesPass(s.result.resources)), 'Every direct scenario remains within the recorded resource policy', 'unattended-build/resources.jsonl');
+      return reports();
+    }
     // Explicit synthetic pilot input, never presented as BMAD output.
     const loopCwd = setup('loop'); mkdirSync(join(loopCwd, 'pilot-spec'), { recursive: true });
     writeFileSync(join(loopCwd, 'pilot-spec/SPEC.md'), '# Arithmetic pilot\n\n## Why\nValidate two ordered stories.\n\n## Capabilities\nMultiply and divide finite numbers; divide throws RangeError on zero divisor.\n\n## Constraints\nJavaScript ES modules, arithmetic.js exports multiply and divide, node:test tests, no dependencies.\n\n## Non-goals\nCLI, UI, arbitrary precision.\n\n## Success signal\nIndependent assertions and tests pass.\n');
@@ -264,11 +269,11 @@ export async function validate(options: { root: string; live: boolean; timeoutMs
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const value = (key: string) => { const i = args.indexOf(key); return i < 0 ? undefined : args[i + 1]; };
-  if (args.includes('--help')) console.log('Usage: npm run phase0 -- [--live] [--model provider/model] [--timeout-ms 900000] [--root path] [--router http://127.0.0.1:10000]');
+  if (args.includes('--help')) console.log('Usage: npm run phase0 -- [--live] [--skip-loop] [--model provider/model] [--timeout-ms 900000] [--root path] [--router http://127.0.0.1:10000]');
   else {
     const timeoutMs = Number(value('--timeout-ms') ?? 900000);
     if (!Number.isFinite(timeoutMs) || timeoutMs < 1000) throw new Error('timeout-ms must be >=1000');
-    validate({ root: value('--root') ?? process.cwd(), live: args.includes('--live'), timeoutMs, model: value('--model'), router: value('--router') })
+    validate({ root: value('--root') ?? process.cwd(), live: args.includes('--live'), skipLoop: args.includes('--skip-loop'), timeoutMs, model: value('--model'), router: value('--router') })
       .then(passed => { process.exitCode = passed ? 0 : 1; }).catch(error => { console.error(error); process.exitCode = 1; });
   }
 }

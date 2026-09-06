@@ -1,0 +1,18 @@
+import { describe, expect, it } from 'vitest';
+import { awaitsInput, conversationFromJsonl } from '../../src/services/workflow-sessions.js';
+
+describe('durable workflow conversation contracts', () => {
+  it('extracts the provider session and assistant output from OpenCode JSONL', () => {
+    const source = [
+      JSON.stringify({ type: 'step_start', sessionID: 'ses_123', part: {} }),
+      JSON.stringify({ type: 'text', sessionID: 'ses_123', part: { text: 'Choose a planning route?' } }),
+    ].join('\n');
+    expect(conversationFromJsonl(source)).toEqual({ providerSessionId: 'ses_123', content: 'Choose a planning route?' });
+  });
+
+  it('distinguishes a conversational checkpoint from completed output', () => {
+    expect(awaitsInput('bmad-prd', 'Which audience should this serve?', [])).toBe(true);
+    expect(awaitsInput('bmad-prd', 'Created the PRD.', ['_bmad-output/planning-artifacts/prd.md'])).toBe(false);
+    expect(awaitsInput('bmad-help', 'Would you like guidance?', [])).toBe(false);
+  });
+});

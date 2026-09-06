@@ -1,51 +1,1612 @@
 {
   "openapi": "3.0.3",
-  "info": { "title": "MIC Playable Checkpoint API", "version": "0.6.0" },
-  "servers": [{ "url": "http://127.0.0.1:3100" }],
+  "info": {
+    "title": "MIC BMAD-native API",
+    "version": "0.13.0",
+    "description": "Local control plane for discovered BMAD workflows, durable conversations, immutable artifacts, story delivery and explicit Git integration."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3100"
+    }
+  ],
   "components": {
-    "parameters": { "id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, "key": { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } } },
+    "parameters": {
+      "id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "key": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
     "schemas": {
-      "Project": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } },
-      "Repository": { "type": "object", "required": ["path"], "properties": { "path": { "type": "string" }, "role": { "type": "string" }, "baseBranch": { "type": "string", "default": "main" } } },
-      "WorkItem": { "type": "object", "required": ["projectId", "title", "intent"], "properties": { "projectId": { "type": "string" }, "title": { "type": "string" }, "intent": { "type": "string" }, "priority": { "type": "integer" } } },
-      "Approval": { "type": "object", "required": ["artifactHash", "approver"], "properties": { "artifactHash": { "type": "string" }, "approver": { "type": "string", "default": "Michael" } } },
-      "PlanningFeedback": { "type": "object", "required": ["artifactHash", "feedback", "actor"], "properties": { "artifactHash": { "type": "string" }, "feedback": { "type": "string" }, "actor": { "type": "string", "default": "Michael" } } },
-      "BuildTarget": { "oneOf": [{ "type": "object", "required": ["type", "intent"], "properties": { "type": { "const": "direct" }, "intent": { "type": "string" } } }, { "type": "object", "required": ["type", "path"], "properties": { "type": { "const": "spec" }, "path": { "type": "string" } } }, { "type": "object", "required": ["type", "specFolder", "storyId"], "properties": { "type": { "const": "story" }, "specFolder": { "type": "string" }, "storyId": { "type": "string" } } }] },
-      "Answer": { "type": "object", "required": ["answer", "actor"], "properties": { "answer": { "type": "string" }, "actor": { "type": "string", "default": "Michael" } } },
-      "Object": { "type": "object", "additionalProperties": true }
+      "Project": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Repository": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string",
+            "default": "main"
+          }
+        }
+      },
+      "WorkItem": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "title",
+          "intent"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        }
+      },
+      "Approval": {
+        "type": "object",
+        "required": [
+          "artifactHash",
+          "approver"
+        ],
+        "properties": {
+          "artifactHash": {
+            "type": "string"
+          },
+          "approver": {
+            "type": "string",
+            "default": "Michael"
+          }
+        }
+      },
+      "PlanningFeedback": {
+        "type": "object",
+        "required": [
+          "artifactHash",
+          "feedback",
+          "actor"
+        ],
+        "properties": {
+          "artifactHash": {
+            "type": "string"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "default": "Michael"
+          }
+        }
+      },
+      "BuildTarget": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "intent"
+            ],
+            "properties": {
+              "type": {
+                "const": "direct"
+              },
+              "intent": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "path"
+            ],
+            "properties": {
+              "type": {
+                "const": "spec"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "specFolder",
+              "storyId"
+            ],
+            "properties": {
+              "type": {
+                "const": "story"
+              },
+              "specFolder": {
+                "type": "string"
+              },
+              "storyId": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Answer": {
+        "type": "object",
+        "required": [
+          "answer",
+          "actor"
+        ],
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "default": "Michael"
+          }
+        }
+      },
+      "Object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "Workstream": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "repositoryId",
+          "title",
+          "intent",
+          "path"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "string"
+          },
+          "legacyWorkItemId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "enum": [
+              "undecided",
+              "direct",
+              "spec-epic",
+              "project",
+              "specialist"
+            ]
+          }
+        }
+      },
+      "WorkflowStart": {
+        "type": "object",
+        "required": [
+          "workstreamId",
+          "skill",
+          "prompt"
+        ],
+        "properties": {
+          "workstreamId": {
+            "type": "string"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowResponse": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "default": "Michael"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "required": [
+          "kind",
+          "actor"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "rejected",
+              "feedback",
+              "override"
+            ]
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "default": "Michael"
+          }
+        }
+      }
     }
   },
   "paths": {
-    "/health": { "get": { "tags": ["System"], "summary": "Liveness", "responses": { "200": { "description": "Healthy" } } } },
-    "/system/status": { "get": { "tags": ["System"], "summary": "Combined status", "responses": { "200": { "description": "Status" } } } },
-    "/resources": { "get": { "tags": ["System"], "summary": "Resource status", "responses": { "200": { "description": "Resources" } } } },
-    "/scheduler": { "get": { "tags": ["System"], "summary": "Queue status", "responses": { "200": { "description": "Queue" } } } },
-    "/projects": { "get": { "tags": ["Projects"], "responses": { "200": { "description": "List" } } }, "post": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Project" } } } }, "responses": { "201": { "description": "Created" } } } },
-    "/projects/{id}": { "get": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Project" } } } },
-    "/projects/{id}/repositories": { "post": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }, { "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Repository" } } } }, "responses": { "201": { "description": "Created" } } } },
-    "/repositories": { "get": { "tags": ["Projects"], "responses": { "200": { "description": "List" } } } },
-    "/repositories/{id}": { "get": { "tags": ["Projects"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Repository" } } } },
-    "/work-items": { "get": { "tags": ["Work"], "responses": { "200": { "description": "List" } } }, "post": { "tags": ["Work"], "parameters": [{ "$ref": "#/components/parameters/key" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkItem" } } } }, "responses": { "201": { "description": "Created" } } } },
-    "/work-items/{id}": { "get": { "tags": ["Work"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Work item" } } } },
-    "/work-items/{id}/detail": { "get": { "tags": ["Work"], "summary": "Lifecycle and provenance", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Detail" } } } },
-    "/work-items/{id}/discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Object" } } } }, "responses": { "200": { "description": "Advanced" } } } },
-    "/work-items/{id}/planning": { "post": { "tags": ["Lifecycle"], "summary": "Start BMAD planning", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Result" } } } },
-    "/work-items/{id}/planning-feedback": { "post": { "tags": ["Lifecycle"], "summary": "Request a revision of the latest planning artifact", "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlanningFeedback" } } } }, "responses": { "200": { "description": "Returned to planning" } } } },
-    "/work-items/{id}/planning-approval": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Approval" } } } }, "responses": { "200": { "description": "Approved" } } } },
-    "/work-items/{id}/technical-discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Advanced" } } } },
-    "/work-items/{id}/implementation": { "post": { "tags": ["Lifecycle"], "summary": "Start Build Auto for one explicit unit", "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BuildTarget" } } } }, "responses": { "200": { "description": "Result" } } } },
-    "/work-items/{id}/pause": { "post": { "tags": ["Lifecycle"], "summary": "Pause legacy work safely", "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["reason", "actor"], "properties": { "reason": { "type": "string" }, "actor": { "type": "string" } } } } } }, "responses": { "200": { "description": "Paused" } } } },
-    "/work-items/{id}/implementation-approval": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Approval" } } } }, "responses": { "200": { "description": "Approved" } } } },
-    "/questions": { "get": { "tags": ["Questions"], "responses": { "200": { "description": "List" } } } },
-    "/questions/{id}/answer": { "post": { "tags": ["Questions"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Answer" } } } }, "responses": { "200": { "description": "Resumed" } } } },
-    "/runs": { "get": { "tags": ["Runs"], "responses": { "200": { "description": "List" } } } },
-    "/runs/{id}": { "get": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Run" } } } },
-    "/runs/{id}/cancel": { "post": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Cancelled" } } } },
-    "/runs/{id}/evidence": { "get": { "tags": ["Evidence"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Evidence" } } } },
-    "/runs/{id}/logs": { "get": { "tags": ["Runs"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Captured stdout and stderr" } } } },
-    "/runs/{id}/gates": { "get": { "tags": ["Evidence"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Gates" } } } },
-    "/artifacts/{type}/{id}/content": { "get": { "tags": ["Evidence"], "parameters": [{ "name": "type", "in": "path", "required": true, "schema": { "type": "string", "enum": ["planning", "implementation"] } }, { "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Artifact text" } } } },
-    "/approvals": { "get": { "tags": ["Lifecycle"], "responses": { "200": { "description": "List" } } } },
-    "/evidence": { "post": { "tags": ["Evidence"], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Object" } } } }, "responses": { "201": { "description": "Created" } } } }
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Liveness",
+        "responses": {
+          "200": {
+            "description": "Healthy"
+          }
+        }
+      }
+    },
+    "/system/status": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Combined status",
+        "responses": {
+          "200": {
+            "description": "Status"
+          }
+        }
+      }
+    },
+    "/resources": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Resource status",
+        "responses": {
+          "200": {
+            "description": "Resources"
+          }
+        }
+      }
+    },
+    "/scheduler": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Queue status",
+        "responses": {
+          "200": {
+            "description": "Queue"
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Project"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/projects/{id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project"
+          }
+        }
+      }
+    },
+    "/projects/{id}/repositories": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Repository"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/repositories": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/repositories/{id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repository"
+          }
+        }
+      }
+    },
+    "/work-items": {
+      "get": {
+        "tags": [
+          "Work"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Work"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/work-items/{id}": {
+      "get": {
+        "tags": [
+          "Work"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work item"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/detail": {
+      "get": {
+        "tags": [
+          "Work"
+        ],
+        "summary": "Lifecycle and provenance",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/discovery": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Advanced"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/planning": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "summary": "Start BMAD planning",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/planning-feedback": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "summary": "Request a revision of the latest planning artifact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanningFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returned to planning"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/planning-approval": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approval"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approved"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/technical-discovery": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Advanced"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/implementation": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "summary": "Start Build Auto for one explicit unit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildTarget"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/pause": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "summary": "Pause legacy work safely",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason",
+                  "actor"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "actor": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Paused"
+          }
+        }
+      }
+    },
+    "/work-items/{id}/implementation-approval": {
+      "post": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approval"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approved"
+          }
+        }
+      }
+    },
+    "/questions": {
+      "get": {
+        "tags": [
+          "Questions"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/questions/{id}/answer": {
+      "post": {
+        "tags": [
+          "Questions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Answer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resumed"
+          }
+        }
+      }
+    },
+    "/runs": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/runs/{id}": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run"
+          }
+        }
+      }
+    },
+    "/runs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled"
+          }
+        }
+      }
+    },
+    "/runs/{id}/evidence": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evidence"
+          }
+        }
+      }
+    },
+    "/runs/{id}/logs": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Captured stdout and stderr"
+          }
+        }
+      }
+    },
+    "/runs/{id}/gates": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gates"
+          }
+        }
+      }
+    },
+    "/artifacts/{type}/{id}/content": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "planning",
+                "implementation"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artifact text"
+          }
+        }
+      }
+    },
+    "/approvals": {
+      "get": {
+        "tags": [
+          "Lifecycle"
+        ],
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/evidence": {
+      "post": {
+        "tags": [
+          "Evidence"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/repositories/{id}/bmad/refresh": {
+      "post": {
+        "tags": [
+          "BMAD Catalog"
+        ],
+        "summary": "Refresh the installed BMAD catalog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/repositories/{id}/bmad": {
+      "get": {
+        "tags": [
+          "BMAD Catalog"
+        ],
+        "summary": "List discovered workflow definitions",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/repositories/{id}/bmad/health": {
+      "get": {
+        "tags": [
+          "BMAD Catalog"
+        ],
+        "summary": "Show modules and effective configuration",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workstreams": {
+      "get": {
+        "tags": [
+          "Workstreams"
+        ],
+        "summary": "List native workstreams",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workstreams"
+        ],
+        "summary": "Create a native workstream",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Workstream"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workstreams/{id}/operations": {
+      "get": {
+        "tags": [
+          "Workstreams"
+        ],
+        "summary": "List valid next BMAD operations",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workflow-sessions": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List durable workflow sessions",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Start an installed BMAD workflow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowStart"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Get transcript and state",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workflow-sessions/{id}/respond": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Continue the same provider session",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}/classify": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Safely classify an ambiguous exit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "classification"
+                ],
+                "properties": {
+                  "classification": {
+                    "type": "string",
+                    "enum": [
+                      "waiting",
+                      "finished"
+                    ]
+                  },
+                  "actor": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}/pause": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Pause active workflow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}/resume": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Resume a paused or interrupted workflow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Cancel active workflow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/workflow-sessions/{id}/events": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Server-sent session events",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workstreams/{id}/artifacts/index": {
+      "post": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Rebuild native artifact index",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/artifacts": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "List immutable artifact revisions",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/artifacts/{id}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Get an immutable artifact revision",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/artifacts/{id}/download": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Download raw artifact source",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workstreams/{id}/artifact-graph": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Show artifact relationships and freshness",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/artifact-diff": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Compare two artifact revisions",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/artifacts/{id}/reviews": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Bind a decision to this exact revision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Review"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artifacts/{id}/feedback": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Start an owning-workflow revision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "feedback",
+                  "actor"
+                ],
+                "properties": {
+                  "feedback": {
+                    "type": "string"
+                  },
+                  "actor": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attention": {
+      "get": {
+        "tags": [
+          "Attention"
+        ],
+        "summary": "Questions, blocks, invalid artifacts and feedback",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/workstreams/{id}/stories/sync": {
+      "post": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "Read the latest valid stories.yaml",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/stories": {
+      "get": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "List ordered stories",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/stories/{id}/dispatch": {
+      "post": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "Dispatch exactly one story",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "skill"
+                ],
+                "properties": {
+                  "skill": {
+                    "type": "string",
+                    "enum": [
+                      "bmad-build",
+                      "bmad-build-auto"
+                    ]
+                  },
+                  "actor": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stories/{id}/status": {
+      "post": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "Record native story status and evidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "actor"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "actor": {
+                    "type": "string"
+                  },
+                  "evidence": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workstreams/{id}/retrospective-readiness": {
+      "get": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "Reject retrospective while stories remain unfinished",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ]
+      }
+    },
+    "/workstreams/{id}/integrate": {
+      "post": {
+        "tags": [
+          "Delivery"
+        ],
+        "summary": "Explicit fast-forward integration",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "actor",
+                  "confirm"
+                ],
+                "properties": {
+                  "actor": {
+                    "type": "string"
+                  },
+                  "confirm": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

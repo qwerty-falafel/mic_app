@@ -4,9 +4,9 @@ This repository implements Morgan's Intelligent Control (MIC). The active roadma
 
 ## Current status
 
-Sprints 01–07 produced the durable kernel, Git worktree isolation, OpenCode transport, resource checks and first playable browser checkpoint. Real use showed that the fixed lifecycle reduces BMAD to one `bmad-spec` run, an empty technical-discovery transition and one whole-intent Build Auto run. That path is superseded and must not be used for implementation work.
+Sprints 01–07 produced the durable kernel, Git worktree isolation, OpenCode transport, resource checks and first browser checkpoint. Real use showed that its fixed lifecycle reduced BMAD to one `bmad-spec` run, an empty technical-discovery transition and one whole-intent Build Auto run. That legacy path remains queryable as history and is fail-closed for new implementation work.
 
-The active [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) begins with Sprint 08. It rebuilds MIC around discovered BMAD skills, durable interactive sessions, native artifacts and adaptive development paths. The existing TTS work remains a paused validation candidate until the final Sprint 14.
+Sprints 08–13 of the [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) add discovered BMAD operations, durable multi-turn sessions, immutable artifact revisions, feedback and review, adaptive workstream paths, one-story delivery and explicit fast-forward integration. Sprint 14 uses the preserved TTS feature as the real platform validation. The observed BMAD transport and artifact behavior is recorded in [the contract observatory](docs/bmad-contract-observatory.md).
 
 ## Playable local checkpoint
 
@@ -53,6 +53,23 @@ Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, 
 At planning approval, open the latest planning artifact from the work-item view. If it needs changes, enter feedback and select **Request planning revision**. MIC records the review and returns the item to planning; select **Start real planning** to revise the document in the same isolated branch. Review the newly hashed artifact, then repeat the feedback step or approve it. An older revision cannot be approved after a newer one exists.
 
 Stop the combined development server with one `Ctrl-C`. The next `npm run dev` reuses the same data.
+
+## Using the BMAD-native PWA
+
+1. Open **Projects**, create or select a project, and attach the absolute path of an existing clean Git repository.
+2. Select **Inspect BMAD**. MIC reads the installed catalog and shows its version, modules, effective settings and output paths. Shared BMAD tooling still resolves `{project-root}` to the attached repository.
+3. Describe the desired outcome and choose a path:
+   - **Direct attended Build** for one bounded change;
+   - **Spec-backed epic** for a concise spec and ordered story delivery;
+   - **Project-sized planning** for product, UX and architecture work before epics;
+   - **Research, review or course correction** for an existing body of work.
+4. Open the workstream and choose a concrete installed operation. **Ask BMAD what next** is the `bmad-help` operation. The PWA always shows the skill and action it will invoke.
+5. Follow the session transcript. When BMAD asks something, reply in the same session. Running sessions update over SSE and can be paused or cancelled. After a service restart, incomplete execution is marked **Interrupted** and can be resumed from its durable provider session.
+6. Select **Refresh index** after a workflow writes files. Review the exact artifact revision in the browser. Accept it or enter feedback; feedback starts a new session for the artifact's owning workflow and keeps the rejected revision immutable.
+7. For a spec-backed epic, run Story Breakdown with `bmad-spec`, index the resulting `stories.yaml`, and select **Read stories.yaml**. Dispatch one eligible story with attended Build or Build Auto. MIC never gives Build Auto the whole epic.
+8. Use code review, walkthrough and retrospective operations as the story inventory reaches completion. Final integration is a separate explicit API decision and succeeds only when the base repository is clean and the result is a fast-forward.
+
+`bmad-loop` remains hidden from the normal workstream choices: its current observed pilot paused with zero completed stories and required manual rollback. MIC will expose it only after that installed contract passes.
 
 ## Development checks
 

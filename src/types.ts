@@ -23,6 +23,7 @@ export interface ExecutionRequest {
   cwd: string;
   model: string;
   command?: string;
+  sessionId?: string;
   prompt: string;
   timeoutMs?: number;
 }

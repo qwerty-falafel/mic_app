@@ -1,0 +1,1 @@
+ALTER TABLE "artifact_revisions" ADD COLUMN "content" text NOT NULL;
