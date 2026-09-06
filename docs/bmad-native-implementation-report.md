@@ -32,7 +32,7 @@ Migration 0007 adds ordered story units and integration decisions. MIC reads the
 - Live HTTP smoke: health, PWA asset, catalog health, effective attached-project paths, attention and queue/resource status respond at `127.0.0.1:3100`.
 - TTS base repository: clean at `68424548a10d86c1bdbd330e0222def1e2c9aa3e`.
 
-The remaining validation is intentionally product-facing: complete a real interactive BMAD session through the PWA, rehearse story delivery, then run the fresh TTS workstream through planning and stop for Michael's artifact review. These are acceptance runs of implemented capabilities rather than hidden infrastructure tasks.
+Sprint 14 has now reached its intended planning checkpoint through the live control plane. The TTS workstream used the isolated `mic/...` branch, persisted multiple feedback-bound spec revisions, quarantined invalid decision-history rewrites, and produced a valid `ready-for-dev` spec plus append-only memlog. It is stopped for Michael's exact-revision review; Story Breakdown and implementation have not started.
 
 ## First live usability correction
 
