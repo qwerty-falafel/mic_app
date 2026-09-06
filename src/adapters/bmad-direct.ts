@@ -26,6 +26,14 @@ export function deriveBmadStatus(mode: 'planning' | 'implementation', paths: str
   return 'failed' as const;
 }
 
+export function orderArtifactRefs(mode: 'planning' | 'implementation', paths: string[]) {
+  if (mode !== 'planning') return paths;
+  return [...paths].sort((left, right) => {
+    const rank = (path: string) => /(?:^|\/)SPEC\.md$/i.test(path) ? 0 : /(?:^|\/)\.memlog\.md$/i.test(path) ? 2 : 1;
+    return rank(left) - rank(right) || left.localeCompare(right);
+  });
+}
+
 export class BmadDirectAdapter {
   constructor(private readonly harness = new OpenCodeAdapter()) {}
 
@@ -35,7 +43,7 @@ export class BmadDirectAdapter {
     this.harness.dispatch({ runId: input.runId, cwd: input.worktree, model: input.model, command: skill, timeoutMs: input.timeoutMs, prompt: input.intent });
     const observed = await this.harness.observe(input.runId, true);
     const after = await files(input.worktree);
-    const artifactRefs = after.filter(path => !before.has(path));
+    const artifactRefs = orderArtifactRefs(input.mode, after.filter(path => !before.has(path)));
     const textArtifacts = await Promise.all(artifactRefs.filter(path => /\.(md|ya?ml|json|txt)$/i.test(path)).map(path => readFile(resolve(input.worktree, path), 'utf8').catch(() => '')));
     const status = observed.status === 'cancelled' ? 'cancelled' : deriveBmadStatus(input.mode, artifactRefs, textArtifacts, observed.exitCode);
     const resultRevision = (await exec('git', ['-C', input.worktree, 'rev-parse', 'HEAD'])).stdout.trim();
