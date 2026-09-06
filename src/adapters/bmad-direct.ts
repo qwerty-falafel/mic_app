@@ -7,7 +7,7 @@ import type { RunResult } from '../types.js';
 import { OpenCodeAdapter } from './opencode.js';
 
 const exec = promisify(execFile);
-const ignored = new Set(['.git', '.mic', 'node_modules', '.bmad-loop']);
+const ignored = new Set(['.git', '.mic', '_bmad', 'node_modules', '.bmad-loop']);
 async function files(root: string, dir = root): Promise<string[]> {
   const result: string[] = [];
   for (const entry of await readdir(dir)) {
@@ -16,6 +16,14 @@ async function files(root: string, dir = root): Promise<string[]> {
     if (info.isDirectory()) result.push(...await files(root, path)); else result.push(relative(root, path));
   }
   return result.sort();
+}
+
+async function snapshot(root: string) {
+  const paths = await files(root);
+  return new Map(await Promise.all(paths.map(async path => [
+    path,
+    createHash('sha256').update(await readFile(resolve(root, path))).digest('hex'),
+  ] as const)));
 }
 
 export function deriveBmadStatus(mode: 'planning' | 'implementation', paths: string[], contents: string[], exitCode: number | null) {
@@ -38,19 +46,19 @@ export class BmadDirectAdapter {
   constructor(private readonly harness = new OpenCodeAdapter()) {}
 
   async execute(input: { runId: string; worktree: string; baseline: string; model: string; mode: 'planning' | 'implementation'; intent: string; timeoutMs?: number }): Promise<RunResult> {
-    const before = new Set(await files(input.worktree));
+    const before = await snapshot(input.worktree);
     const skill = input.mode === 'planning' ? 'bmad-spec' : 'bmad-build-auto';
     this.harness.dispatch({ runId: input.runId, cwd: input.worktree, model: input.model, command: skill, timeoutMs: input.timeoutMs, prompt: input.intent });
     const observed = await this.harness.observe(input.runId, true);
-    const after = await files(input.worktree);
-    const artifactRefs = orderArtifactRefs(input.mode, after.filter(path => !before.has(path)));
+    const after = await snapshot(input.worktree);
+    const artifactRefs = orderArtifactRefs(input.mode, [...after].filter(([path, hash]) => before.get(path) !== hash).map(([path]) => path));
     const textArtifacts = await Promise.all(artifactRefs.filter(path => /\.(md|ya?ml|json|txt)$/i.test(path)).map(path => readFile(resolve(input.worktree, path), 'utf8').catch(() => '')));
     const status = observed.status === 'cancelled' ? 'cancelled' : deriveBmadStatus(input.mode, artifactRefs, textArtifacts, observed.exitCode);
     const resultRevision = (await exec('git', ['-C', input.worktree, 'rev-parse', 'HEAD'])).stdout.trim();
     const evidenceRefs = artifactRefs.filter(path => /(?:test|evidence|result|report|log)/i.test(path));
     const blockingCondition = status === 'blocked' ? { code: 'bmad_blocked', message: textArtifacts.find(value => /blocked/i.test(value))?.slice(0, 2000) ?? observed.stderr, raw: { exitCode: observed.exitCode } } : undefined;
     return { runId: input.runId, status, artifactRefs, evidenceRefs, repositoryRevisions: { baseline: input.baseline, result: resultRevision }, blockingCondition,
-      summary: `${skill} ${status}; ${artifactRefs.length} new artifact(s)`, rawAdapterState: { ...observed, stdoutSha256: createHash('sha256').update(observed.stdout).digest('hex') } };
+      summary: `${skill} ${status}; ${artifactRefs.length} changed artifact(s)`, rawAdapterState: { ...observed, stdoutSha256: createHash('sha256').update(observed.stdout).digest('hex') } };
   }
 
   cancel(runId: string) { return this.harness.cancel(runId); }

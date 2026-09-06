@@ -9,6 +9,7 @@
       "Repository": { "type": "object", "required": ["path"], "properties": { "path": { "type": "string" }, "role": { "type": "string" }, "baseBranch": { "type": "string", "default": "main" } } },
       "WorkItem": { "type": "object", "required": ["projectId", "title", "intent"], "properties": { "projectId": { "type": "string" }, "title": { "type": "string" }, "intent": { "type": "string" }, "priority": { "type": "integer" } } },
       "Approval": { "type": "object", "required": ["artifactHash", "approver"], "properties": { "artifactHash": { "type": "string" }, "approver": { "type": "string", "default": "Michael" } } },
+      "PlanningFeedback": { "type": "object", "required": ["artifactHash", "feedback", "actor"], "properties": { "artifactHash": { "type": "string" }, "feedback": { "type": "string" }, "actor": { "type": "string", "default": "Michael" } } },
       "Answer": { "type": "object", "required": ["answer", "actor"], "properties": { "answer": { "type": "string" }, "actor": { "type": "string", "default": "Michael" } } },
       "Object": { "type": "object", "additionalProperties": true }
     }
@@ -28,6 +29,7 @@
     "/work-items/{id}/detail": { "get": { "tags": ["Work"], "summary": "Lifecycle and provenance", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Detail" } } } },
     "/work-items/{id}/discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Object" } } } }, "responses": { "200": { "description": "Advanced" } } } },
     "/work-items/{id}/planning": { "post": { "tags": ["Lifecycle"], "summary": "Start BMAD planning", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Result" } } } },
+    "/work-items/{id}/planning-feedback": { "post": { "tags": ["Lifecycle"], "summary": "Request a revision of the latest planning artifact", "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlanningFeedback" } } } }, "responses": { "200": { "description": "Returned to planning" } } } },
     "/work-items/{id}/planning-approval": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Approval" } } } }, "responses": { "200": { "description": "Approved" } } } },
     "/work-items/{id}/technical-discovery": { "post": { "tags": ["Lifecycle"], "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Advanced" } } } },
     "/work-items/{id}/implementation": { "post": { "tags": ["Lifecycle"], "summary": "Start Build Auto", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "Result" } } } },

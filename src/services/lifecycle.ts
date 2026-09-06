@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { approvals, auditEvents, discoveryRecords, implementationArtifacts, outboxEvents, planningArtifacts, questions, runs, technicalRecords, workItems } from '../db/schema.js';
 import { Kernel } from '../kernel.js';
@@ -31,7 +31,8 @@ export class LifecycleService {
     await this.db.transaction(async tx => {
       const changed = await tx.update(workItems).set({ state: to, updatedAt: new Date() }).where(and(eq(workItems.id, workItemId), eq(workItems.state, from))).returning({ id: workItems.id });
       if (changed.length !== 1) throw new Error(`Invalid transition: expected ${from}, requested ${to}`);
-      const key = `${workItemId}:${action}:${to}`;
+      const revision = typeof detail.artifactHash === 'string' ? `:${detail.artifactHash}` : '';
+      const key = `${workItemId}:${action}:${to}${revision}`;
       await tx.insert(auditEvents).values({ aggregateType: 'work_item', aggregateId: workItemId, action, actor: 'lifecycle', detail: { from, to, ...detail }, idempotencyKey: `${key}:audit` });
       await tx.insert(outboxEvents).values({ id: `evt_${randomUUID()}`, topic: `lifecycle.${action}`, payload: { workItemId, from, to, ...detail }, idempotencyKey: `${key}:outbox` });
     });
@@ -46,9 +47,18 @@ export class LifecycleService {
   async runPlanning(workItemId: string) {
     const item = await this.state(workItemId);
     if (item.state !== 'PLANNING_GRADE') throw new Error(`Invalid transition: expected PLANNING_GRADE, found ${item.state}`);
-    const run = await this.kernel.createRun({ workItemId, kind: 'planning', status: 'RUNNING' }, `${workItemId}:planning`);
+    const [[artifactCount], feedbackEvents] = await Promise.all([
+      this.db.select({ value: count() }).from(planningArtifacts).where(eq(planningArtifacts.workItemId, workItemId)),
+      this.db.select().from(auditEvents).where(and(eq(auditEvents.aggregateType, 'work_item'), eq(auditEvents.aggregateId, workItemId), eq(auditEvents.action, 'planning.feedback'))).orderBy(desc(auditEvents.createdAt)).limit(1),
+    ]);
+    const attempt = Number(artifactCount?.value ?? 0) + 1;
+    const run = await this.kernel.createRun({ workItemId, kind: 'planning', status: 'RUNNING' }, `${workItemId}:planning:${attempt}`);
+    const feedback = (feedbackEvents[0]?.detail as { feedback?: unknown } | undefined)?.feedback;
+    const intent = typeof feedback === 'string'
+      ? `${item.intent}\n\nThis is planning revision ${attempt}. Re-read the existing planning artifacts and decision log in the worktree, then update them in place to address this reviewer feedback without discarding unaffected requirements:\n\n${feedback}`
+      : item.intent;
     let result: RunResult;
-    try { result = await this.executor.execute({ mode: 'planning', runId: run.id, workItemId, intent: item.intent }); }
+    try { result = await this.executor.execute({ mode: 'planning', runId: run.id, workItemId, intent }); }
     catch (error) { await this.db.update(runs).set({ status: 'FAILED', result: { error: String(error) }, updatedAt: new Date() }).where(eq(runs.id, run.id)); throw error; }
     await this.db.update(runs).set({ status: result.status.toUpperCase(), result, baselineRevision: result.repositoryRevisions.baseline, resultRevision: result.repositoryRevisions.result, updatedAt: new Date() }).where(eq(runs.id, run.id));
     if (result.status === 'blocked') return this.block(workItemId, run.id, 'PLANNING_GRADE', result);
@@ -60,10 +70,24 @@ export class LifecycleService {
   }
 
   async recordPlanningApproval(workItemId: string, artifactHash: string, approver: string) {
-    const [artifact] = await this.db.select().from(planningArtifacts).where(and(eq(planningArtifacts.workItemId, workItemId), eq(planningArtifacts.contentHash, artifactHash)));
-    if (!artifact) throw new Error('Planning approval must reference a persisted artifact hash');
+    const [artifact] = await this.db.select().from(planningArtifacts).where(eq(planningArtifacts.workItemId, workItemId)).orderBy(desc(planningArtifacts.createdAt)).limit(1);
+    if (!artifact || artifact.contentHash !== artifactHash) throw new Error('Planning approval must reference the latest persisted artifact hash');
     await this.db.insert(approvals).values({ id: `approval_${randomUUID()}`, workItemId, phase: 'planning', artifactHash, artifactType: 'planning', repositoryRevision: artifact.resultRevision, approver });
     return this.transition(workItemId, 'AWAITING_PLANNING_APPROVAL', 'TECHNICAL_DISCOVERY', 'planning.approved', { artifactHash, approver });
+  }
+
+  async recordPlanningFeedback(workItemId: string, artifactHash: string, feedback: string, actor: string) {
+    const [artifact] = await this.db.select().from(planningArtifacts).where(eq(planningArtifacts.workItemId, workItemId)).orderBy(desc(planningArtifacts.createdAt)).limit(1);
+    if (!artifact || artifact.contentHash !== artifactHash) throw new Error('Planning feedback must reference the latest persisted artifact hash');
+    const feedbackHash = digest({ artifactHash, feedback, actor });
+    await this.db.transaction(async tx => {
+      const changed = await tx.update(workItems).set({ state: 'PLANNING_GRADE', updatedAt: new Date() }).where(and(eq(workItems.id, workItemId), eq(workItems.state, 'AWAITING_PLANNING_APPROVAL'))).returning({ id: workItems.id });
+      if (changed.length !== 1) throw new Error(`Invalid transition: expected AWAITING_PLANNING_APPROVAL, requested PLANNING_GRADE`);
+      const detail = { from: 'AWAITING_PLANNING_APPROVAL', to: 'PLANNING_GRADE', artifactHash, feedback, actor };
+      await tx.insert(auditEvents).values({ aggregateType: 'work_item', aggregateId: workItemId, action: 'planning.feedback', actor, detail, idempotencyKey: `${workItemId}:planning.feedback:${feedbackHash}:audit` });
+      await tx.insert(outboxEvents).values({ id: `evt_${randomUUID()}`, topic: 'lifecycle.planning.feedback', payload: { workItemId, ...detail }, idempotencyKey: `${workItemId}:planning.feedback:${feedbackHash}:outbox` });
+    });
+    return this.state(workItemId);
   }
 
   async runTechnicalDiscovery(workItemId: string, data: Record<string, unknown>) {

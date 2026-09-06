@@ -48,6 +48,8 @@ For frontend development, leave the API running and use `npm run dev:web` in ter
 
 Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, OpenCode, the configured model, and a project with an attached absolute path to a clean local Git repository. MIC's default model is `llama.cpp/gpt-oss-120b-F16`; keep `gpt-oss-120b-F16` loaded for normal MIC work. Set `MIC_MODEL` only for an intentional per-process override. Planning/execution requests can run for a long time; their run appears in the UI and can be cancelled from the work-item view.
 
+At planning approval, open the latest planning artifact from the work-item view. If it needs changes, enter feedback and select **Request planning revision**. MIC records the review and returns the item to planning; select **Start real planning** to revise the document in the same isolated branch. Review the newly hashed artifact, then repeat the feedback step or approve it. An older revision cannot be approved after a newer one exists.
+
 Stop the combined development server with one `Ctrl-C`. The next `npm run dev` reuses the same data.
 
 ## Development checks

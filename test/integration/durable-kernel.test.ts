@@ -3,7 +3,7 @@ import EmbeddedPostgres from 'embedded-postgres';
 import { existsSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
@@ -124,26 +124,39 @@ describe('durable MIC kernel', () => {
     const connection = createDatabase(databaseUrl);
     const kernel = new Kernel(connection.db);
     const project = await kernel.createProject({ name: 'Lifecycle project' }, 'lifecycle-project');
-    const execute = async ({ mode, runId }: { mode: 'planning' | 'implementation'; runId: string }) => ({
+    const intents: string[] = [];
+    const execute = async ({ mode, runId, intent }: { mode: 'planning' | 'implementation'; runId: string; intent: string }) => {
+      intents.push(intent);
+      return ({
       runId, status: 'done' as const, artifactRefs: [`artifacts/${mode}.md`], evidenceRefs: mode === 'implementation' ? ['evidence/tests.log'] : [],
       repositoryRevisions: { baseline: '1111111', result: mode === 'planning' ? '2222222' : '3333333' }, summary: `${mode} complete`, rawAdapterState: {},
-    });
+      });
+    };
     const lifecycle = new LifecycleService(connection.db, { execute });
     try {
       const item = await lifecycle.intake(project.id, 'Build the vertical slice', 'Vertical slice', 'lifecycle-work-item');
       await lifecycle.runDiscovery(item.id, { repositories: [project.id] });
       const planned = await lifecycle.runPlanning(item.id);
       if (!('artifactHash' in planned)) throw new Error('Planning unexpectedly blocked');
-      await lifecycle.recordPlanningApproval(item.id, planned.artifactHash, 'Michael');
+      const feedback = 'Preserve the existing stop control and add an explicit stale-session test.';
+      const returned = await lifecycle.recordPlanningFeedback(item.id, planned.artifactHash, feedback, 'Michael');
+      expect(returned.state).toBe('PLANNING_GRADE');
+      const revised = await lifecycle.runPlanning(item.id);
+      if (!('artifactHash' in revised)) throw new Error('Planning revision unexpectedly blocked');
+      expect(revised.artifactHash).not.toBe(planned.artifactHash);
+      await expect(lifecycle.recordPlanningApproval(item.id, planned.artifactHash, 'Michael')).rejects.toThrow('latest persisted artifact hash');
+      await lifecycle.recordPlanningApproval(item.id, revised.artifactHash, 'Michael');
       await lifecycle.runTechnicalDiscovery(item.id, { risks: [] });
       const implemented = await lifecycle.runImplementation(item.id);
       if (!('artifactHash' in implemented)) throw new Error('Implementation unexpectedly blocked');
       const done = await lifecycle.recordImplementationApproval(item.id, implemented.artifactHash, 'Michael');
 
       expect(done.state).toBe('DONE');
-      expect(await connection.db.select().from(planningArtifacts).where(eq(planningArtifacts.workItemId, item.id))).toHaveLength(1);
+      expect(await connection.db.select().from(planningArtifacts).where(eq(planningArtifacts.workItemId, item.id))).toHaveLength(2);
       expect(await connection.db.select().from(implementationArtifacts).where(eq(implementationArtifacts.workItemId, item.id))).toHaveLength(1);
       expect(await connection.db.select().from(approvals).where(eq(approvals.workItemId, item.id))).toHaveLength(2);
+      expect(intents[1]).toContain(feedback);
+      expect(await connection.db.select().from(auditEvents).where(and(eq(auditEvents.aggregateId, item.id), eq(auditEvents.action, 'planning.feedback')))).toHaveLength(1);
       await expect(lifecycle.runDiscovery(item.id, {})).rejects.toThrow('Invalid transition');
     } finally { await connection.pool.end(); }
   }, 30_000);
