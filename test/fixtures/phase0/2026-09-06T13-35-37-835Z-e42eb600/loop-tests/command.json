@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "/usr/bin/node",
+    "--test"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 211.1397130000405,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 43466.75390625,
+    "peakRssMiB": 6923.9296875,
+    "peakGpuResidentMiB": 66254.28125,
+    "peakCombinedFraction": 0.5848371037835204,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 7.9999999999999964,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

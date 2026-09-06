@@ -1,0 +1,36 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--dir",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/direct",
+    "--pure",
+    "--format",
+    "json",
+    "--model",
+    "llama.cpp/gpt-oss-120b-F16",
+    "--auto",
+    "--command",
+    "bmad-spec",
+    "Slug: arithmetic-pilot. Intent: a dependency-free JavaScript ES module arithmetic.js exporting add(a,b), subtract(a,b), multiply(a,b), and divide(a,b) for finite numbers. divide throws RangeError for zero divisor. Tests use node:test. Non-goals: CLI, UI, persistence, arbitrary precision. Planning only; do not implement."
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/direct",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 183742.53277400002,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 185,
+    "minAvailableMiB": 39082.26171875,
+    "peakRssMiB": 10054.48828125,
+    "peakGpuResidentMiB": 66255.30078125,
+    "peakCombinedFraction": 0.6098645410142699,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 23.461055276381913,
+    "swapInDelta": 6284,
+    "swapOutDelta": 62600,
+    "oomKillDelta": 0
+  }
+}

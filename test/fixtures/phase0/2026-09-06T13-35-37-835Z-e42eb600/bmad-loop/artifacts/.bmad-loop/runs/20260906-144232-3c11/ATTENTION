@@ -1,0 +1,15 @@
+[2026-09-06 14:57:43] ACTION REQUIRED: manual rollback for 1: **ACTION REQUIRED — manual rollback needed**
+Story **1**'s attempt was stopped and auto-rollback is OFF, so the working tree at `/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop` was left for you to inspect.
+To discard this attempt yourself:
+  1. **BACK UP any untracked files you want to keep** — the reset below deletes uncommitted work.
+  2. `git -C "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop" reset --hard 4d732c05a3a5` then review/remove leftover untracked files.
+  3. **Restore the files you backed up in step 1.**
+Then run `bmad-loop resume 20260906-144232-3c11`. To let the orchestrator do a safe automatic rollback next time, enable `[scm] rollback_on_failure` (it discards the attempt's uncommitted work but never deletes pre-existing untracked files).
+[2026-09-06 14:57:43] bmad-loop run finished: run 20260906-144232-3c11: 0 done, 0 deferred, 0 escalated, 139,557 weighted tokens (951,837 raw incl. cache reads)
+PAUSED: **ACTION REQUIRED — manual rollback needed**
+Story **1**'s attempt was stopped and auto-rollback is OFF, so the working tree at `/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop` was left for you to inspect.
+To discard this attempt yourself:
+  1. **BACK UP any untracked files you want to keep** — the reset below deletes uncommitted work.
+  2. `git -C "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop" reset --hard 4d732c05a3a5` then review/remove leftover untracked files.
+  3. **Restore the files you backed up in step 1.**
+Then run `bmad-loop resume 20260906-144232-3c11`. To let the orchestrator do a safe automatic rollback next time, enable `[scm] rollback_on_failure` (it discards the attempt's uncommitted work but never deletes pre-existing untracked files).

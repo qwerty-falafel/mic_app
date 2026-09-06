@@ -1,0 +1,606 @@
+{
+  "status": 200,
+  "durationMs": 2.382761999999957,
+  "body": {
+    "data": [
+      {
+        "id": "DeepSeek-R1-Llama-70B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "DeepSeek-R1-Llama-70B-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/DeepSeek-R1-Distill-Llama-70B/DeepSeek-R1-Distill-Llama-70B-Q8_0-00001-of-00002.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[DeepSeek-R1-Llama-70B-Q8]\nctx-size = 131072\nmodel = /srv/models/DeepSeek-R1-Distill-Llama-70B/DeepSeek-R1-Distill-Llama-70B-Q8_0-00001-of-00002.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "DeepSeek-R1-Llama-8B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "DeepSeek-R1-Llama-8B-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[DeepSeek-R1-Llama-8B-Q8]\nctx-size = 131072\nmodel = /srv/models/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "DeepSeek-R1-Qwen-14B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "DeepSeek-R1-Qwen-14B-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/DeepSeek-R1-Distill-Qwen-14B/DeepSeek-R1-Distill-Qwen-14B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[DeepSeek-R1-Qwen-14B-Q8]\nctx-size = 131072\nmodel = /srv/models/DeepSeek-R1-Distill-Qwen-14B/DeepSeek-R1-Distill-Qwen-14B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Dolphin3-Llama3.1-8B-Abliterated-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "55485",
+            "--alias",
+            "Dolphin3-Llama3.1-8B-Abliterated-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/Dolphin3.0-Llama3.1-8B/Dolphin3.0-Llama3.1-8B-abliterated.Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Dolphin3-Llama3.1-8B-Abliterated-Q8]\nctx-size = 131072\nmodel = /srv/models/Dolphin3.0-Llama3.1-8B/Dolphin3.0-Llama3.1-8B-abliterated.Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Dolphin3-Llama3.1-8B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Dolphin3-Llama3.1-8B-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/Dolphin3.0-Llama3.1-8B/Dolphin3.0-Llama3.1-8B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Dolphin3-Llama3.1-8B-Q8]\nctx-size = 131072\nmodel = /srv/models/Dolphin3.0-Llama3.1-8B/Dolphin3.0-Llama3.1-8B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Llama-3.3-70B-Instruct-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Llama-3.3-70B-Instruct-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/Llama-3.3-70B-Instruct/Llama-3.3-70B-Instruct-Q8_0-00001-of-00002.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Llama-3.3-70B-Instruct-Q8]\nctx-size = 131072\nmodel = /srv/models/Llama-3.3-70B-Instruct/Llama-3.3-70B-Instruct-Q8_0-00001-of-00002.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Muse-Glimmer-30B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Muse-Glimmer-30B-Q8",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/Muse-Glimmer-30B/Muse-Glimmer-30B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Muse-Glimmer-30B-Q8]\nctx-size = 131072\nmodel = /srv/models/Muse-Glimmer-30B/Muse-Glimmer-30B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Phi-4-mini-BF16",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Phi-4-mini-BF16",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/Phi-4-mini-instruct/Phi-4-mini-instruct.BF16.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Phi-4-mini-BF16]\nctx-size = 131072\nmodel = /srv/models/Phi-4-mini-instruct/Phi-4-mini-instruct.BF16.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Qwen-AgentWorld-35B-A3B-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Qwen-AgentWorld-35B-A3B-Q8",
+            "--ctx-size",
+            "262144",
+            "--model",
+            "/srv/models/qwen-agentworld-35b-a3b/Qwen-AgentWorld-35B-A3B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Qwen-AgentWorld-35B-A3B-Q8]\nctx-size = 262144\nmodel = /srv/models/qwen-agentworld-35b-a3b/Qwen-AgentWorld-35B-A3B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Qwen3.5-18B-REAP-A3B-Coding-Q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Qwen3.5-18B-REAP-A3B-Coding-Q8",
+            "--ctx-size",
+            "262144",
+            "--model",
+            "/srv/models/Qwen3.5-18B-REAP-A3B-Coding/Qwen3.5-18B-REAP-A3B-Coding-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Qwen3.5-18B-REAP-A3B-Coding-Q8]\nctx-size = 262144\nmodel = /srv/models/Qwen3.5-18B-REAP-A3B-Coding/Qwen3.5-18B-REAP-A3B-Coding-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Qwen3.8-27b-q2",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "Qwen3.8-27b-q2",
+            "--ctx-size",
+            "262144",
+            "--model",
+            "/srv/models/qwen3.8-27b/Qwen3.8-27B-UD-Q2_K_XL.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Qwen3.8-27b-q2]\nctx-size = 262144\nmodel = /srv/models/qwen3.8-27b/Qwen3.8-27B-UD-Q2_K_XL.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "Qwen3.8-27b-q8",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "46911",
+            "--alias",
+            "Qwen3.8-27b-q8",
+            "--ctx-size",
+            "262144",
+            "--model",
+            "/srv/models/qwen3.8-27b/Qwen3.8-27B-Q8_0.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[Qwen3.8-27b-q8]\nctx-size = 262144\nmodel = /srv/models/qwen3.8-27b/Qwen3.8-27B-Q8_0.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "gemma-4-12B-Q4",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--alias",
+            "gemma-4-12B-Q4",
+            "--ctx-size",
+            "262144",
+            "--model",
+            "/srv/models/gemma-4-12B/gemma-4-12B-it-qat-UD-Q4_K_XL.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[gemma-4-12B-Q4]\nctx-size = 262144\nmodel = /srv/models/gemma-4-12B/gemma-4-12B-it-qat-UD-Q4_K_XL.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      },
+      {
+        "id": "gpt-oss-120b-F16",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "loaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--jinja",
+            "--port",
+            "39907",
+            "--alias",
+            "gpt-oss-120b-F16",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/gpt-oss-120b/gpt-oss-120b-F16.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[gpt-oss-120b-F16]\njinja = true\nctx-size = 131072\nmodel = /srv/models/gpt-oss-120b/gpt-oss-120b-F16.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false,
+        "meta": {
+          "vocab_type": true,
+          "n_vocab": 201088,
+          "n_ctx": 131072,
+          "n_ctx_train": 131072,
+          "n_embd": 2880,
+          "n_params": 116829156672,
+          "size": 65355994368,
+          "ftype": "F16"
+        }
+      },
+      {
+        "id": "gpt-oss-20b-F16",
+        "aliases": [],
+        "tags": [],
+        "object": "model",
+        "owned_by": "llamacpp",
+        "created": 1788701739,
+        "status": {
+          "value": "unloaded",
+          "args": [
+            "/home/michael/src/llama.cpp/build-rocm/bin/llama-server",
+            "--host",
+            "127.0.0.1",
+            "--jinja",
+            "--port",
+            "48715",
+            "--alias",
+            "gpt-oss-20b-F16",
+            "--ctx-size",
+            "131072",
+            "--model",
+            "/srv/models/gpt-oss-20b/gpt-oss-20b-F16.gguf",
+            "--n-gpu-layers",
+            "all",
+            "--parallel",
+            "1"
+          ],
+          "preset": "[gpt-oss-20b-F16]\njinja = true\nctx-size = 131072\nmodel = /srv/models/gpt-oss-20b/gpt-oss-20b-F16.gguf\nn-gpu-layers = all\nparallel = 1\n\n"
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "source": "preset",
+        "can_remove": false
+      }
+    ],
+    "object": "list"
+  }
+}

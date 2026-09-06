@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "git",
+    "-C",
+    "/home/michael/src/llama.cpp",
+    "rev-parse",
+    "HEAD"
+  ],
+  "cwd": "/home/michael/projects/machine_setup",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 7.242919000000029,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 43251.2890625,
+    "peakRssMiB": 6923.921875,
+    "peakGpuResidentMiB": 66254.609375,
+    "peakCombinedFraction": 0.5848396637071972,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 6.25,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

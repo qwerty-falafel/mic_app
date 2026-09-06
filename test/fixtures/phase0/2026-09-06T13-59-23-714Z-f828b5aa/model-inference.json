@@ -1,0 +1,41 @@
+{
+  "status": 200,
+  "durationMs": 604.8144020000002,
+  "body": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "",
+          "reasoning_content": "The user says: \""
+        }
+      }
+    ],
+    "created": 1788703165,
+    "model": "gpt-oss-120b-F16",
+    "system_fingerprint": "b10762-7798007a2",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 73,
+      "total_tokens": 81,
+      "prompt_tokens_details": {
+        "cached_tokens": 68
+      }
+    },
+    "id": "chatcmpl-1uGHar8dcIYmBO1WBcwJEamHdi1F0kOV",
+    "timings": {
+      "cache_n": 68,
+      "prompt_n": 5,
+      "prompt_ms": 97.167,
+      "prompt_per_token_ms": 19.4334,
+      "prompt_per_second": 51.45779945866395,
+      "predicted_n": 8,
+      "predicted_ms": 218.992,
+      "predicted_per_token_ms": 31.28457142857143,
+      "predicted_per_second": 31.964637977643022
+    }
+  }
+}

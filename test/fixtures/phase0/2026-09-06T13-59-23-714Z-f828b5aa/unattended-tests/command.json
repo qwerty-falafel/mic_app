@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "/usr/bin/node",
+    "--test"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-59-23-714Z-f828b5aa/unattended",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 87.21571799996309,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 41382.92578125,
+    "peakRssMiB": 8875.49609375,
+    "peakGpuResidentMiB": 66264.984375,
+    "peakCombinedFraction": 0.6005194771949043,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 4.477611940298509,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

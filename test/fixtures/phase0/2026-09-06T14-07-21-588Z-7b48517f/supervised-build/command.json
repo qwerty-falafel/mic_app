@@ -1,0 +1,37 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--dir",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/direct",
+    "--pure",
+    "--format",
+    "json",
+    "--model",
+    "llama.cpp/gpt-oss-120b-F16",
+    "--auto",
+    "--command",
+    "bmad-build-auto",
+    "Use _bmad-output/implementation-artifacts/spec-export-add.md. The bounded arithmetic pilot is approved. Follow the complete workflow."
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/direct",
+  "exitCode": null,
+  "signal": "SIGTERM",
+  "timedOut": false,
+  "error": "Validation interrupted",
+  "durationMs": 74771.149722,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 76,
+    "minAvailableMiB": 39260.04296875,
+    "peakRssMiB": 9942.7890625,
+    "peakGpuResidentMiB": 66271.39453125,
+    "peakCombinedFraction": 0.6090668126031287,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 26.819322459222082,
+    "swapInDelta": 25,
+    "swapOutDelta": 2980,
+    "oomKillDelta": 0
+  }
+}

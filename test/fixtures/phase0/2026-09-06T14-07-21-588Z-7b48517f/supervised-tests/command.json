@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "/usr/bin/node",
+    "--test"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/direct",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 202.77194500004407,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 40446.109375,
+    "peakRssMiB": 9024.78515625,
+    "peakGpuResidentMiB": 66271.39453125,
+    "peakCombinedFraction": 0.601763818631905,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 7.814992025518341,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

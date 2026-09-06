@@ -1,0 +1,7 @@
+[core]
+user_name = "Corky"
+communication_language = "English"
+document_output_language = "English"
+
+[modules.bmm]
+user_skill_level = "intermediate"

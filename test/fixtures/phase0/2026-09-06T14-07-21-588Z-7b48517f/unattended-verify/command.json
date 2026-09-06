@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "/usr/bin/node",
+    "--input-type=module",
+    "-e",
+    "import assert from 'node:assert/strict'; import {subtract} from './arithmetic.js'; assert.equal(subtract(5,3),2); assert.equal(subtract(-3,2),-5); assert.equal(subtract(0,0),0);"
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T14-07-21-588Z-7b48517f/unattended",
+  "exitCode": 1,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 154.89347000000998,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 2,
+    "minAvailableMiB": 40004.41796875,
+    "peakRssMiB": 9935.98828125,
+    "peakGpuResidentMiB": 66272.8359375,
+    "peakCombinedFraction": 0.6090576343401898,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 7.4152542372881385,
+    "swapInDelta": 0,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

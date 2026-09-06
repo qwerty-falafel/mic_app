@@ -1,0 +1,12 @@
+{
+  "samples": 2,
+  "minAvailableMiB": 41597.38671875,
+  "peakRssMiB": 8582.00390625,
+  "peakGpuResidentMiB": 66254.609375,
+  "peakCombinedFraction": 0.5980118446419783,
+  "gpuMeasured": true,
+  "peakSystemCpuPercent": 4.632012352032944,
+  "swapInDelta": 0,
+  "swapOutDelta": 0,
+  "oomKillDelta": 0
+}

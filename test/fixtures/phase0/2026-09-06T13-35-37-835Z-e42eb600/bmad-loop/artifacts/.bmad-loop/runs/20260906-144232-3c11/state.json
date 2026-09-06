@@ -1,0 +1,219 @@
+{
+  "run_id": "20260906-144232-3c11",
+  "project": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop",
+  "started_at": "2026-09-06T14:42:32",
+  "policy_snapshot": {
+    "gates": {
+      "mode": "none",
+      "on_escalation": "pause",
+      "retrospective": "notify"
+    },
+    "limits": {
+      "max_review_cycles": 3,
+      "max_dev_attempts": 2,
+      "max_followup_reviews": 1,
+      "session_timeout_min": 15,
+      "git_timeout_s": 120,
+      "teardown_grace_s": 20,
+      "stop_without_result_nudges": 1,
+      "dev_stall_grace_s": 600,
+      "dev_stall_nudges": 2,
+      "dev_stall_nudges_cap": 6,
+      "workflow_stall_nudges_cap": 3,
+      "dev_contract_nudge": true,
+      "max_tokens_per_story": 2000000,
+      "cache_read_weight": 0.1,
+      "session_budget_mode": "warn",
+      "max_tokens_per_session": 4000000,
+      "session_budget_grace_s": 240
+    },
+    "verify": {
+      "commands": [],
+      "stream_capture_kb": 256
+    },
+    "notify": {
+      "desktop": false,
+      "file": true
+    },
+    "review": {
+      "enabled": true,
+      "trigger": "recommended",
+      "on_timeout": "retry",
+      "on_status_contradiction": "escalate"
+    },
+    "stories": {
+      "source": "sprint-status",
+      "spec_folder": ""
+    },
+    "dev": {
+      "skill": "bmad-dev-auto"
+    },
+    "adapter": {
+      "name": "opencode-http",
+      "model": "llama.cpp/gpt-oss-120b-F16",
+      "extra_args": null,
+      "cleanup_session_on_finish": true,
+      "usage_grace_s": null,
+      "stop_without_result_nudges": null,
+      "dev": {
+        "name": null,
+        "model": null,
+        "extra_args": null,
+        "usage_grace_s": null,
+        "stop_without_result_nudges": null
+      },
+      "review": {
+        "name": null,
+        "model": null,
+        "extra_args": null,
+        "usage_grace_s": null,
+        "stop_without_result_nudges": null
+      },
+      "triage": {
+        "name": null,
+        "model": null,
+        "extra_args": null,
+        "usage_grace_s": null,
+        "stop_without_result_nudges": null
+      }
+    },
+    "sweep": {
+      "auto": "never",
+      "max_bundles": 5,
+      "max_triage_attempts": 2,
+      "max_migration_attempts": 2,
+      "repeat": false,
+      "max_cycles": 5
+    },
+    "scm": {
+      "isolation": "none",
+      "branch_per": "story",
+      "target_branch": "",
+      "merge_strategy": "merge",
+      "delete_branch": true,
+      "keep_failed": true,
+      "rollback_on_failure": false,
+      "preserve_keep": 20,
+      "failed_diff_max_mb": 5,
+      "failed_diff_unlimited": false,
+      "commit_message_template": "",
+      "max_parallel": 1,
+      "seed_adapter_defaults": true,
+      "worktree_seed": []
+    },
+    "cleanup": {
+      "run_retention": 10,
+      "retention_days": 0,
+      "trim_artifacts": true,
+      "archive_old": true,
+      "auto_clean_on_finish": true,
+      "clean_tmp": true
+    },
+    "plugins": {
+      "enabled": [],
+      "settings": {}
+    },
+    "tui": {
+      "low_frame_rate": false,
+      "left_width": 0,
+      "runs_height": 0,
+      "deferred_height": 0,
+      "tasks_height": 0
+    },
+    "operator": {
+      "enabled": true
+    },
+    "mux": {
+      "backend": ""
+    }
+  },
+  "trusted_config_digest": "2e295c4eb71996b51c7fc21b6530b994c91aeb5a956e0dea1e8d36c2958611b0",
+  "current_epic": 0,
+  "epic_filter": null,
+  "story_filter": null,
+  "max_stories": 2,
+  "paused_reason": "**ACTION REQUIRED \u2014 manual rollback needed**\nStory **1**'s attempt was stopped and auto-rollback is OFF, so the working tree at `/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop` was left for you to inspect.\nTo discard this attempt yourself:\n  1. **BACK UP any untracked files you want to keep** \u2014 the reset below deletes uncommitted work.\n  2. `git -C \"/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop\" reset --hard 4d732c05a3a5` then review/remove leftover untracked files.\n  3. **Restore the files you backed up in step 1.**\nThen run `bmad-loop resume 20260906-144232-3c11`. To let the orchestrator do a safe automatic rollback next time, enable `[scm] rollback_on_failure` (it discards the attempt's uncommitted work but never deletes pre-existing untracked files).",
+  "paused_stage": "escalation",
+  "paused_story_key": "1",
+  "finished": false,
+  "stopped": false,
+  "crashed": false,
+  "crash_error": null,
+  "run_type": "story",
+  "source": "stories",
+  "spec_folder": "pilot-spec",
+  "sweep_cycle": 1,
+  "sweeps_triggered": [],
+  "sweeps_refused": {},
+  "target_branch": "",
+  "plugin_shared": {},
+  "tasks": {
+    "1": {
+      "story_key": "1",
+      "epic": 0,
+      "phase": "dev-verify",
+      "attempt": 1,
+      "review_cycle": 0,
+      "followup_reviews_spent": 0,
+      "followup_review_recommended": false,
+      "baseline_commit": "4d732c05a3a58a342a809b9de73e7347a9b6db0b",
+      "baseline_untracked": [],
+      "baseline_ledger_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pre_harvest_ledger": null,
+      "pre_harvest_ledger_captured": false,
+      "harvest_wrote_ledger": false,
+      "ledger_changed_before_harvest": false,
+      "harvested_deferrals": [],
+      "bundle_closes_intended": [],
+      "refiled_followups": [],
+      "story_closes_intended": [],
+      "board_advance_intended": null,
+      "accepted_dev_session_index": null,
+      "harvest_carry_commit_pending": false,
+      "isolated_ledger_carried": false,
+      "spec_file": null,
+      "dispatched_spec_file": null,
+      "dispatched_spec_snapshot": null,
+      "commit_sha": null,
+      "operator_actions": [],
+      "defer_reason": null,
+      "preserve_ref": null,
+      "preserve_partial": false,
+      "rearmed": false,
+      "resolved_redrive": false,
+      "plan_checkpoint_pending": false,
+      "plan_review_owed": false,
+      "sentinel_kind": "",
+      "restore_patch": null,
+      "dw_ids": [],
+      "bundle_file": null,
+      "worktree_path": "",
+      "branch": "",
+      "sessions": [
+        {
+          "task_id": "1-dev-1",
+          "role": "dev",
+          "status": "timeout",
+          "adapter": "opencode-http",
+          "model": "llama.cpp/gpt-oss-120b-F16",
+          "session_id": "ses_f890aff97ffesXkYwdlqpMaCWz",
+          "transcript_path": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/loop/.bmad-loop/runs/20260906-144232-3c11/tasks/1-dev-1/messages.json",
+          "usage": {
+            "input_tokens": 45646,
+            "output_tokens": 3658,
+            "cache_read_tokens": 902533,
+            "cache_creation_tokens": 0
+          },
+          "result_json": null
+        }
+      ],
+      "tokens": {
+        "input_tokens": 45646,
+        "output_tokens": 3658,
+        "cache_read_tokens": 902533,
+        "cache_creation_tokens": 0
+      },
+      "token_budget_warned": false
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--dir",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/unattended",
+    "--pure",
+    "--format",
+    "json",
+    "--model",
+    "llama.cpp/gpt-oss-120b-F16",
+    "--auto",
+    "--command",
+    "bmad-build-auto",
+    "Approved pilot: create arithmetic.js exporting subtract(a,b) for finite numbers, with node:test tests for positive, negative and zero values. ES modules, no dependencies, no UI. Execute the full unattended workflow including verification and review."
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-35-37-835Z-e42eb600/unattended",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "durationMs": 63179.842787,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 65,
+    "minAvailableMiB": 44008.19140625,
+    "peakRssMiB": 5638.62109375,
+    "peakGpuResidentMiB": 66254.19140625,
+    "peakCombinedFraction": 0.574564254942799,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 15.047021943573668,
+    "swapInDelta": 524,
+    "swapOutDelta": 0,
+    "oomKillDelta": 0
+  }
+}

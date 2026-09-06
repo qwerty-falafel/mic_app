@@ -1,0 +1,39 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--dir",
+    "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-59-23-714Z-f828b5aa/blocked",
+    "--pure",
+    "--format",
+    "json",
+    "--model",
+    "llama.cpp/gpt-oss-120b-F16",
+    "--auto",
+    "--command",
+    "bmad-build-auto",
+    "--agent",
+    "phase0-no-subagents",
+    "Create arithmetic.js exporting add(a,b) with node:test tests. Follow the skill including its subagent requirement and HALT protocol."
+  ],
+  "cwd": "/home/michael/projects/machine_setup/.phase0/2026-09-06T13-59-23-714Z-f828b5aa/blocked",
+  "exitCode": null,
+  "signal": "SIGTERM",
+  "timedOut": false,
+  "error": "Validation interrupted",
+  "durationMs": 43482.195525999996,
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "resources": {
+    "samples": 45,
+    "minAvailableMiB": 40167.0078125,
+    "peakRssMiB": 9514.7265625,
+    "peakGpuResidentMiB": 66265.89453125,
+    "peakCombinedFraction": 0.6056354534444319,
+    "gpuMeasured": true,
+    "peakSystemCpuPercent": 10.623052959501555,
+    "swapInDelta": 1250,
+    "swapOutDelta": 2612,
+    "oomKillDelta": 0
+  }
+}
