@@ -16,7 +16,7 @@ export class OutboxRuntime {
   async start() {
     await this.boss.start();
     await this.boss.createQueue(OUTBOX_QUEUE, { policy: 'singleton' });
-    await this.boss.work<OutboxJob>(OUTBOX_QUEUE, { batchSize: 1 }, async jobs => {
+    await this.boss.work<OutboxJob>(OUTBOX_QUEUE, { batchSize: 1 }, async (jobs: Job<OutboxJob>[]) => {
       for (const job of jobs) await this.process(job);
     });
   }

@@ -1,6 +1,8 @@
 # Repository instructions
 
-Before changing MIC's domain model, roadmap, lifecycle, API vocabulary, UI labels, prompts, or BMAD workflow presentation, read and follow [docs/scrum-and-product-terminology.md](docs/scrum-and-product-terminology.md).
+This repository owns the executable MIC application. Product policy, research, roadmaps, epics, and delivery planning belong in the sibling [`../mic_product_development`](../mic_product_development) repository. Host setup and hardware configuration belong in [`../machine_setup`](../machine_setup).
+
+Before changing MIC's domain model, lifecycle, API vocabulary, UI labels, prompts, or BMAD workflow presentation, read and follow [`../mic_product_development/policy/scrum-and-product-terminology.md`](../mic_product_development/policy/scrum-and-product-terminology.md).
 
 Keep these distinctions explicit:
 
