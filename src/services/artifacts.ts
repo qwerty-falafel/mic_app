@@ -133,9 +133,18 @@ export class ArtifactService {
   }
 
   async attention() {
-    const sessions = await this.db.select().from(workflowSessions).where(inArray(workflowSessions.status, ['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION']));
-    const invalid = await this.db.select().from(artifactRevisions).where(eq(artifactRevisions.status, 'quarantined'));
-    const reviews = await this.db.select().from(reviewDecisions).where(inArray(reviewDecisions.kind, ['rejected', 'feedback']));
-    return { sessions, invalidArtifacts: invalid, reviewFeedback: reviews };
+    const candidates = await this.db.select().from(workflowSessions).where(inArray(workflowSessions.status, ['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION']));
+    const sessions = candidates.filter(session => {
+      const raw = session.rawState as any;
+      return !(session.status === 'INTERRUPTED' && raw?.status === 'done' && raw?.rawAdapterState?.exitCode === 0);
+    });
+    const revisions = await this.db.select().from(artifactRevisions).orderBy(desc(artifactRevisions.createdAt));
+    const latest = new Map<string, typeof artifactRevisions.$inferSelect>();
+    for (const revision of revisions) {
+      const key = `${revision.workstreamId}:${revision.path}`;
+      if (!latest.has(key)) latest.set(key, revision);
+    }
+    const invalid = [...latest.values()].filter(revision => revision.status === 'quarantined');
+    return { sessions, invalidArtifacts: invalid, reviewFeedback: [] };
   }
 }
