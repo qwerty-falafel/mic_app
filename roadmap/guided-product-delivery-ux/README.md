@@ -33,8 +33,12 @@ Product
 │   ├── BMAD path and current stage
 │   ├── artifacts and decisions
 │   ├── workflow runs and conversations
-│   └── stories and evidence where applicable
-├── Sprint Backlog / BMAD tracking where applicable
+│   ├── stories and evidence where applicable
+│   └── BMAD tracking where applicable
+├── Sprints
+│   ├── Sprint Goal
+│   ├── selected Product Backlog Items
+│   └── evolving delivery plan
 └── usable Increments and integration history
 ```
 
@@ -73,7 +77,7 @@ A run opens at a stable URL in a bounded chat workspace with a pinned header, sc
 
 ### Break down and deliver work
 
-After planning acceptance, MIC recommends the correct native breakdown operation. It renders epics, stories, readiness, sprint tracking, and current delivery status from the path's actual artifacts. Exactly one eligible story is dispatched at a time unless an explicitly enabled, validated automation policy applies.
+After planning acceptance, MIC recommends the correct native breakdown operation. It renders Epics, Stories, readiness, BMAD tracking, and current delivery status from the path's actual artifacts. Scrum Sprint selection remains a separate product-level activity. Exactly one eligible Story is dispatched at a time unless an explicitly enabled, validated automation policy applies.
 
 ### Inspect, adapt, and integrate
 

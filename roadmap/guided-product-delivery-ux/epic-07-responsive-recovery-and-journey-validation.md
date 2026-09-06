@@ -22,7 +22,7 @@ MIC prevents predictable invalid actions, reports local actionable failures, rem
 7. Add visual regression fixtures for long Briefs, many revisions, long conversations, invalid artifacts, blocked runs, and large story inventories.
 8. Instrument local UX evidence: route visited, recommended action shown, override used, error category, decision latency, and abandoned action, without external telemetry.
 9. Run a clean first-use test where the participant has no BMAD command knowledge.
-10. Correct every critical or journey-blocking issue found before the TTS acceptance sprint.
+10. Correct every critical or journey-blocking issue found before the TTS acceptance Epic.
 
 ## Acceptance criteria
 
@@ -36,4 +36,4 @@ MIC prevents predictable invalid actions, reports local actionable failures, rem
 
 ## Exit and review
 
-Michael reviews the browser-test recording and manually completes the seeded epic journey at desktop and narrow width. Any critical confusion returns to the responsible earlier sprint rather than being documented as acceptable friction.
+Michael reviews the browser-test recording and manually completes the seeded Epic journey at desktop and narrow width. Any critical confusion returns to the responsible earlier Epic rather than being documented as acceptable friction.
