@@ -4,6 +4,7 @@
 **Product Goal:** A user can understand, guide, review, and advance BMAD delivery without learning BMAD's internal commands or losing access to expert controls.
 **Feature:** Guided product delivery — MIC's persistent capability for turning a Brief into transparent, controllable, evidence-backed delivery.
 **Research:** [Guided Product Delivery UX Research](../../docs/guided-product-delivery-ux-research.md)
+**Terminology:** [Scrum and Product Terminology](../../docs/scrum-and-product-terminology.md)
 **Evidence source:** Historical Sprint 14 planning rehearsal and its recorded UX findings
 
 ## Problem

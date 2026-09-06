@@ -2,6 +2,8 @@
 
 Status: working product model for the UX recovery epic
 
+Terminology in this research is governed by the canonical [Scrum and Product Terminology](./scrum-and-product-terminology.md).
+
 ## Why this review exists
 
 MIC currently exposes BMAD sessions and files, but it does not explain the product outcome, current decision, permitted action, or next stage as one coherent journey. The TTS rehearsal showed contradictions between the stage heading, numbered chips, generic workflow launcher, artifact rail, and story controls. This note grounds the correction in Scrum, Agile, Lean, and BMAD rather than preserving MIC's accidental vocabulary.

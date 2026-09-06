@@ -8,6 +8,8 @@ Sprints 01–07 produced the durable kernel, Git worktree isolation, OpenCode tr
 
 Sprints 08–13 of the [BMAD-native MIC PWA epic](sprints/epic-bmad-native-mic.md) add discovered BMAD operations, durable multi-turn sessions, immutable artifact revisions, feedback and review, adaptive workstream paths, one-story delivery and explicit fast-forward integration. The historical Sprint 14 TTS rehearsal exposed serious journey and information-architecture failures, so implementation is paused at its valid planning artifact while the [Guided Product Delivery UX initiative](roadmap/guided-product-delivery-ux/README.md) is refined and delivered. Its eight delivery Epics are backlog structure rather than a predeclared Scrum Sprint schedule. The supporting Scrum, Lean, Agile, and BMAD model is recorded in [the UX research note](docs/guided-product-delivery-ux-research.md).
 
+MIC's canonical definitions and translation rules are in [Scrum and Product Terminology](docs/scrum-and-product-terminology.md). Use that reference when naming domain objects, planning work, writing prompts, or interpreting BMAD artifacts.
+
 ## Playable local checkpoint
 
 Install dependencies once:
