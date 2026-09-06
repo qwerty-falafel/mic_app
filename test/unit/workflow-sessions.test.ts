@@ -14,6 +14,8 @@ describe('durable workflow conversation contracts', () => {
     expect(awaitsInput('bmad-prd', 'Which audience should this serve?', [])).toBe(true);
     expect(awaitsInput('bmad-prd', 'Draft saved. Continue to the next section?', ['draft-prd.md'])).toBe(true);
     expect(awaitsInput('bmad-prd', 'Created the PRD.', ['_bmad-output/planning-artifacts/prd.md'])).toBe(false);
+    expect(awaitsInput('bmad-project-context', 'Applied this configuration:\n```js\nconst value = configured ?? fallback;\n```\nChanges are complete.', [])).toBe(false);
+    expect(awaitsInput('bmad-prd', 'Draft saved.\nPlease choose one audience.', ['draft-prd.md'])).toBe(true);
     expect(awaitsInput('bmad-help', 'Would you like guidance?', [])).toBe(false);
   });
 

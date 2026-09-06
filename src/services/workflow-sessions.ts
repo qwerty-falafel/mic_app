@@ -26,7 +26,12 @@ export function conversationFromJsonl(stdout: string) {
 export function awaitsInput(skill: string, content: string, artifactRefs: string[]) {
   if (skill === 'bmad-help') return false;
   void artifactRefs;
-  return /(?:\?|choose|select|reply|provide|would you like|\[[a-z0-9]+\]\s)/i.test(content.slice(-2000));
+  const tail = content.slice(-3000).replace(/```[\s\S]*?```/g, '');
+  const lines = tail.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const question = lines.some(line => /\?\s*$/.test(line));
+  const explicitRequest = lines.slice(-5).some(line => /^(?:please\s+)?(?:choose|select|reply|provide|confirm|tell me|let me know)\b/i.test(line));
+  const menu = lines.slice(-20).some(line => /^\[[a-z0-9]+\]\s+\S/i.test(line));
+  return question || explicitRequest || menu;
 }
 
 export function preserveControlState(persisted: string | undefined, observed: string) {
@@ -145,10 +150,11 @@ export class WorkflowSessionService {
 
   async classify(sessionId: string, classification: 'waiting' | 'finished', actor = 'api') {
     const [session] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId));
-    if (!session || session.status !== 'NEEDS_CLASSIFICATION') throw new Error('Workflow session does not need classification');
+    const correctingFalseWait = session?.status === 'WAITING_FOR_INPUT' && classification === 'finished';
+    if (!session || (session.status !== 'NEEDS_CLASSIFICATION' && !correctingFalseWait)) throw new Error('Workflow session does not need classification');
     const status = classification === 'waiting' ? 'WAITING_FOR_INPUT' : 'FINISHED';
     await this.db.update(workflowSessions).set({ status, updatedAt: new Date(), finishedAt: status === 'FINISHED' ? new Date() : null }).where(eq(workflowSessions.id, sessionId));
-    await this.db.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: sessionId, action: 'classified', actor, detail: { classification }, idempotencyKey: `${sessionId}:classified:${classification}` }).onConflictDoNothing();
+    await this.db.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: sessionId, action: correctingFalseWait ? 'false_wait.corrected' : 'classified', actor, detail: { classification }, idempotencyKey: `${sessionId}:classified:${classification}` }).onConflictDoNothing();
     return { sessionId, status };
   }
 
