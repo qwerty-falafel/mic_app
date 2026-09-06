@@ -58,7 +58,8 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
     if ((error as any).code === '23505') return reply.code(409).send({ error: 'conflict', message: error instanceof Error ? error.message : String(error) });
     if (error instanceof Error && error.message.startsWith('Invalid transition')) return reply.code(409).send({ error: 'invalid_transition', message: error.message });
     if (error instanceof Error && (error.message.startsWith('Delivery state changed') || error.message.startsWith('Action is not available') || error.message.startsWith('Action prerequisites'))) return reply.code(409).send({ error: 'stale_or_ineligible_action', message: error.message });
-    return reply.send(error);
+    if (error instanceof Error && (/Sprint|Product Backlog Item|Definition of Done|same Product/.test(error.message))) return reply.code(409).send({ error: 'scrum_constraint', message: error.message });
+    return reply.code(500).send({ error: 'internal_error', message: error instanceof Error ? error.message : 'Unexpected MIC error' });
   });
   app.get('/health', async () => ({ status: 'ok' }));
   app.get('/system/status', async () => {

@@ -93,7 +93,7 @@ describe('product model and delivery lifecycle projection', () => {
     expect(increment.json()).toMatchObject({ definitionOfDone: expect.stringContaining('usable'), sprintId: sprint.id });
 
     const tooLong = await app.inject({ method: 'POST', url: '/scrum-sprints', payload: { projectId: product.id, number: 2, goal: 'Invalid timebox', startsAt: '2026-09-01T09:00:00Z', endsAt: '2026-10-15T09:00:00Z' } });
-    expect(tooLong.statusCode).toBe(500);
-    expect(tooLong.json()).toMatchObject({ message: expect.stringContaining('one month') });
+    expect(tooLong.statusCode).toBe(409);
+    expect(tooLong.json()).toMatchObject({ error: 'scrum_constraint', message: expect.stringContaining('one month') });
   }, 30_000);
 });
