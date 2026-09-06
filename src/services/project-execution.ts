@@ -1,4 +1,7 @@
 import { execFile } from 'node:child_process';
+import { access, cp, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { and, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
@@ -9,6 +12,18 @@ import { WorktreeManager, type WorktreeLease } from '../worktree.js';
 import type { LifecycleExecutor } from './lifecycle.js';
 
 const exec = promisify(execFile);
+const sharedBmadRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../_bmad');
+
+async function prepareBmadRuntime(worktree: string, repository: string) {
+  const runtime = resolve(worktree, '_bmad');
+  try {
+    await access(runtime);
+    return async () => {};
+  } catch {}
+  await cp(sharedBmadRoot, runtime, { recursive: true });
+  await writeFile(resolve(runtime, 'config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository))}\n`);
+  return () => rm(runtime, { recursive: true, force: true });
+}
 
 export class ProjectExecutionService implements LifecycleExecutor {
   constructor(private readonly db: Database, private readonly model: string, private readonly worktrees = new WorktreeManager(), private readonly adapter = new BmadDirectAdapter()) {}
@@ -27,7 +42,10 @@ export class ProjectExecutionService implements LifecycleExecutor {
       if (!repository) throw new Error('Project has no repository');
       lease = await this.worktrees.create(repository.path, repository.baseBranch, input.workItemId, input.runId);
     }
-    const result = await this.adapter.execute({ ...input, worktree: lease.path, baseline: lease.baseline, model: this.model });
+    const cleanupBmad = await prepareBmadRuntime(lease.path, lease.repository);
+    let result: RunResult;
+    try { result = await this.adapter.execute({ ...input, worktree: lease.path, baseline: lease.baseline, model: this.model }); }
+    finally { await cleanupBmad(); }
     if (result.status === 'done') {
       await exec('git', ['-C', lease.path, 'add', '-A']);
       const status = (await exec('git', ['-C', lease.path, 'status', '--porcelain'])).stdout;

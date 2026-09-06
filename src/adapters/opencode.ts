@@ -4,7 +4,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExecutionRequest } from '../types.js';
 
-const defaultConfigPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../opencode.json');
+const micRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const defaultConfigPath = resolve(micRoot, 'opencode.json');
+const defaultConfigDir = resolve(micRoot, '.opencode');
 
 export interface HarnessObservation { runId: string; status: 'running' | 'done' | 'failed' | 'cancelled'; exitCode: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string; startedAt: string; finishedAt?: string }
 
@@ -18,7 +20,11 @@ export class OpenCodeAdapter {
     const args = ['run', '--dir', request.cwd, '--pure', '--format', 'json', '--model', request.model, '--auto', request.prompt];
     const statePath = resolve(request.cwd, '.mic/runs', `${request.runId}.json`);
     mkdirSync(resolve(statePath, '..'), { recursive: true });
-    const env = { ...process.env, OPENCODE_CONFIG: process.env.OPENCODE_CONFIG ?? defaultConfigPath };
+    const env = {
+      ...process.env,
+      OPENCODE_CONFIG: process.env.OPENCODE_CONFIG ?? defaultConfigPath,
+      OPENCODE_CONFIG_DIR: process.env.OPENCODE_CONFIG_DIR ?? defaultConfigDir,
+    };
     const child = spawn('opencode', args, { cwd: request.cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const observation: HarnessObservation = { runId: request.runId, status: 'running', exitCode: null, signal: null, stdout: '', stderr: '', startedAt: new Date().toISOString() };
     child.stdout?.on('data', chunk => { observation.stdout += chunk.toString(); });
