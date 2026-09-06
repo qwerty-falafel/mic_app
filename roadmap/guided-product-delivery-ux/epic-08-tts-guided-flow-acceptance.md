@@ -1,7 +1,7 @@
-# Sprint 22 – TTS Guided-flow Acceptance
+# Epic 08 – TTS Guided-flow Acceptance
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 21 journey validation
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 07 journey validation
 
 ## Goal
 

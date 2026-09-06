@@ -1,7 +1,7 @@
-# Sprint 16 – Route-backed Application Shell
+# Epic 02 – Route-backed Application Shell
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 15 lifecycle projection and slugs
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 01 lifecycle projection and slugs
 
 ## Goal
 

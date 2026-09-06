@@ -1,6 +1,6 @@
 # Sprint 14 – TTS Real-world Platform Validation
 
-> **Paused at planning review (2026-09-06).** The real TTS rehearsal produced a valid `SPEC.md` and append-only decision log without changing the base branch. It also exposed journey-blocking PWA defects. Continue through [Sprint 22](./22-tts-guided-flow-acceptance.md) after the [Guided Product Delivery UX epic](./epic-guided-product-delivery-ux.md) makes the approval and breakdown path understandable.
+> **Paused at planning review (2026-09-06).** The real TTS rehearsal produced a valid `SPEC.md` and append-only decision log without changing the base branch. It also exposed journey-blocking PWA defects. Continue through [TTS Guided-flow Acceptance](../roadmap/guided-product-delivery-ux/epic-08-tts-guided-flow-acceptance.md) after the [Guided Product Delivery UX initiative](../roadmap/guided-product-delivery-ux/README.md) makes the approval and breakdown path understandable.
 
 **Epic:** [BMAD-native MIC PWA](./epic-bmad-native-mic.md)
 **Depends on:** Sprint 13 synthetic epic acceptance

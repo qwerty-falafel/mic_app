@@ -1,7 +1,7 @@
-# Sprint 19 – Conversations, Runs, and Activity
+# Epic 05 – Conversations, Runs, and Activity
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 18 artifact decisions
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 04 artifact decisions
 
 ## Goal
 

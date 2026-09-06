@@ -54,7 +54,9 @@ The UI should normally display the classified type, such as `Epic: Long-form TTS
 
 ### Feature
 
-A customer-visible capability or behavior. It can be a Product Backlog item, label, or grouping depending on scale. Because neither Scrum nor BMAD assigns Feature a fixed mandatory level, MIC should not force every Goal to contain Features or every Feature to contain Epics.
+A durable customer-visible capability or behavior of the Product. MIC treats Features as first-class product objects with their own lifecycle and links to Product Goals, Briefs, backlog items, Epics, evidence, and Increments. A Feature remains after an Epic closes and may be changed by many Epics over time.
+
+Feature is a deliberate MIC product-management extension rather than a formal Scrum artifact. It must not become compulsory process: a Brief may update an existing Feature, propose a new Feature, describe a defect, trigger research, or require no Feature change at all.
 
 ### Epic and story
 
@@ -66,9 +68,34 @@ A Sprint is a timebox with one Sprint Goal and selected ready backlog items. Its
 
 ## Example classification
 
-The TTS Application is the Product. “Make long-form reading begin quickly and continue beyond 5,000 characters” can support a Product Goal or a Feature, depending on the owner's product strategy. The current implementation request is one coherent multi-session outcome, so BMAD correctly treats it as a spec-backed Epic. Its Brief is the original long request, its current planning artifact is `SPEC.md`, and Story Breakdown will create its ordered backlog in `stories.yaml`.
+The TTS Application is the Product. Its active Product Goal could be “Enable people to consume long text comfortably by listening.” `Long-form text-to-speech playback` is a persistent Feature. The current request, `Build reliable paragraph-aware long-form playback`, is one bounded initiative that changes that Feature, so BMAD correctly treats it as a spec-backed Epic. Its Brief is the original long request, its current planning artifact is `SPEC.md`, and Story Breakdown will create its ordered backlog in `stories.yaml`. The Epic eventually closes; the Feature remains and can receive later Epics.
 
-The MIC UX correction is larger. MIC is the Product; the Product Goal is that a user can understand and control BMAD delivery without knowing BMAD internals. The redesign spans the domain model, navigation, planning, conversations, artifact review, backlog, delivery, and responsive behavior, so it is a product initiative implemented as the epic and sprints linked below.
+The MIC UX correction is larger. MIC is the Product; the Product Goal is that a user can understand and control BMAD delivery without knowing BMAD internals. The redesign spans the domain model, navigation, planning, conversations, artifact review, backlog, delivery, and responsive behavior, so it is a Product Initiative organized into the Epics linked below. Those Epics still need story refinement before actual Sprint Planning selects ready work around a Sprint Goal.
+
+## Where Scrum, BMAD, and MIC align
+
+- Scrum supplies the product and cadence model: a Product Goal orders one Product Backlog, Sprint Planning selects ready items around a Sprint Goal, and completed work contributes to a usable Increment.
+- BMAD supplies adaptive discovery and delivery workflows. It deliberately changes planning depth according to the size and uncertainty of the requested outcome, then gives each implementation unit to one bounded Build session.
+- MIC supplies the durable control plane around BMAD: repository isolation, resumable sessions, artifact revisions, human decisions, evidence, and integration history.
+- The three approaches agree that work should be transparent, inspected against an outcome, corrected when evidence changes, and delivered in small usable pieces.
+
+## Where BMAD differs from Scrum
+
+- BMAD is a software-delivery method, not a complete product-management or Scrum system. Its artifacts begin around an intended change or project; it does not provide MIC's required persistent Product Goal and Feature layer.
+- BMAD `sprint-planning` is primarily a readiness and tracking workflow that creates `sprint-status.yaml`. The file name does not establish a timeboxed Scrum Sprint with a Sprint Goal, selected Product Backlog items, and a resulting Increment.
+- A BMAD spec-backed Epic uses `SPEC.md` and `stories.yaml` without `sprint-status.yaml`. Calling that story sequence a Sprint would erase a deliberate BMAD path distinction.
+- BMAD's Epic Retrospective checks whether an Epic is complete and whether the next Epic may proceed. A Scrum Sprint Retrospective instead examines how the Scrum Team can improve quality and effectiveness for the next Sprint.
+- BMAD's project-sized path, a MIC Project, and a Scrum Product are different scopes despite the shared word “project.” The UI must translate these explicitly.
+- BMAD can create substantial planning artifacts and approval points. MIC must apply them adaptively so that documentation supports small working Increments instead of becoming a fixed waterfall stage chain.
+
+## MIC product decisions arising from the comparison
+
+1. Treat Product, Product Goal, persistent Feature, and Product Backlog as MIC product objects around BMAD rather than pretending BMAD already supplies them.
+2. Treat a Brief as immutable intake evidence. Triage determines whether it proposes a Goal or Feature, changes an existing Feature, creates an Epic or smaller backlog item, or starts Research or Correction.
+3. Keep Epics and Features independent: an Epic is bounded work and closes; a Feature is a lasting product capability that many Epics may change.
+4. Do not nest Sprints beneath Epics. A Sprint selects ready backlog items, potentially from several Epics, around one Sprint Goal.
+5. Label BMAD tracking as BMAD tracking unless MIC has explicit Sprint, Sprint Goal, selection, and Increment records.
+6. Keep BMAD workflow names visible as provenance while the primary UI explains the product decision, artifact, and consequence in human terms.
 
 ## Product interaction principles
 
@@ -79,7 +106,7 @@ The MIC UX correction is larger. MIC is the Product; the Product Goal is that a 
 5. **Artifacts carry decisions.** Review surfaces name the exact artifact, decision, source of truth, downstream effect, and feedback route.
 6. **Stable places.** Products, delivery cases, stages, runs, and artifacts have route-backed URLs, human-readable slugs, breadcrumbs, and browser-history behavior.
 7. **Bounded workspaces.** Chat, document review, logs, and history use their own scroll regions. Selecting an item always changes the visible, focused workspace.
-8. **Inspect and adapt.** Each sprint produces a usable increment and evidence; corrections update upstream sources and regenerate affected work.
+8. **Inspect and adapt.** Each completed backlog item should produce or contribute to a usable Increment and evidence. Actual Sprints inspect progress toward a Sprint Goal; corrections update upstream sources and regenerate affected work.
 
 ## State model required by the UX
 
@@ -108,4 +135,4 @@ The epic proceeds with provisional choices, but the following questions remain f
 
 ## Delivery plan
 
-See [Epic: Guided Product Delivery UX](../sprints/epic-guided-product-delivery-ux.md) and Sprints 15–22.
+See the [Guided Product Delivery UX initiative](../roadmap/guided-product-delivery-ux/README.md) and its eight delivery Epics. These Epics must be refined into stories before actual Sprint Planning selects work around a Sprint Goal.

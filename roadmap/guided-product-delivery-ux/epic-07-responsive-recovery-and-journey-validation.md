@@ -1,7 +1,7 @@
-# Sprint 21 – Responsive Recovery and Journey Validation
+# Epic 07 – Responsive Recovery and Journey Validation
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 20 backlog and delivery surfaces
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 06 backlog and delivery surfaces
 
 ## Goal
 

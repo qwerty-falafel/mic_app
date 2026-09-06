@@ -1,23 +1,25 @@
 # MIC roadmap
 
-## Active epic
+## Active product initiative
 
-[Guided Product Delivery UX](./epic-guided-product-delivery-ux.md) is the active product roadmap. It responds to the first real TTS planning rehearsal by replacing MIC's technical workstream page with a route-backed, state-aware, guided product-delivery experience.
+[Guided Product Delivery UX](../roadmap/guided-product-delivery-ux/README.md) is the active product roadmap. It responds to the first real TTS planning rehearsal by replacing MIC's technical workstream page with a route-backed, state-aware, guided product-delivery experience.
 
-| Sprint | Outcome | Validation boundary |
+Its current structure is eight delivery Epics. They are Product Backlog organization, not Scrum Sprints. Each Epic must be refined into stories; actual Sprint Planning later selects ready stories around one Sprint Goal.
+
+| Epic | Outcome | Validation boundary |
 |---|---|---|
-| [15](./15-product-language-and-lifecycle-truth.md) | Product language, slugs, delivery classification and one lifecycle projection | TTS reports one truthful stage and eligible action set |
-| [16](./16-route-backed-application-shell.md) | Stable routes, breadcrumbs, workspace shell and scroll ownership | Desktop and narrow route/selection journey |
-| [17](./17-guided-delivery-workspace.md) | Current task, one recommended action and auditable advanced override | No-BMAD-knowledge comprehension test |
-| [18](./18-planning-and-artifact-decisions.md) | Focused planning review, feedback and exact-revision decisions | Feedback and acceptance rehearsal |
-| [19](./19-conversations-runs-and-activity.md) | Bounded chat, semantic runs, separate logs and useful history | Wait/pause/refresh/resume conversation |
-| [20](./20-backlog-epics-stories-and-sprint-tracking.md) | Product goals, native epic/story decomposition and correct tracking | Direct, epic and project paths compared |
-| [21](./21-responsive-recovery-and-journey-validation.md) | Local recovery, accessibility, responsive behavior and browser journeys | Clean first-use acceptance |
-| [22](./22-tts-guided-flow-acceptance.md) | Resume the real TTS epic through the redesigned guided flow | Michael's UX verdict before TTS delivery continues |
+| [01](../roadmap/guided-product-delivery-ux/epic-01-product-language-and-lifecycle-truth.md) | Product language, Features, slugs, delivery classification and one lifecycle projection | TTS reports one truthful stage and eligible action set |
+| [02](../roadmap/guided-product-delivery-ux/epic-02-route-backed-application-shell.md) | Stable routes, breadcrumbs, workspace shell and scroll ownership | Desktop and narrow route/selection journey |
+| [03](../roadmap/guided-product-delivery-ux/epic-03-guided-delivery-workspace.md) | Current task, one recommended action and auditable advanced override | No-BMAD-knowledge comprehension test |
+| [04](../roadmap/guided-product-delivery-ux/epic-04-planning-and-artifact-decisions.md) | Focused planning review, feedback and exact-revision decisions | Feedback and acceptance rehearsal |
+| [05](../roadmap/guided-product-delivery-ux/epic-05-conversations-runs-and-activity.md) | Bounded chat, semantic runs, separate logs and useful history | Wait/pause/refresh/resume conversation |
+| [06](../roadmap/guided-product-delivery-ux/epic-06-backlog-epics-stories-and-sprint-tracking.md) | Product Goals, persistent Features, native epic/story decomposition and correct tracking | Direct, epic and project paths compared |
+| [07](../roadmap/guided-product-delivery-ux/epic-07-responsive-recovery-and-journey-validation.md) | Local recovery, accessibility, responsive behavior and browser journeys | Clean first-use acceptance |
+| [08](../roadmap/guided-product-delivery-ux/epic-08-tts-guided-flow-acceptance.md) | Resume the real TTS Epic through the redesigned guided flow | Michael's UX verdict before TTS delivery continues |
 
 ## Prior BMAD-native epic
 
-[BMAD-native MIC PWA](./epic-bmad-native-mic.md) established the current control-plane contracts. Sprint 14 is paused at its valid TTS specification review while the UX epic is delivered.
+[BMAD-native MIC PWA](./epic-bmad-native-mic.md) established the current control-plane contracts. Historical Sprint 14 is paused at its valid TTS specification review while the UX initiative is delivered.
 
 | Sprint | Outcome | Validation boundary |
 |---|---|---|

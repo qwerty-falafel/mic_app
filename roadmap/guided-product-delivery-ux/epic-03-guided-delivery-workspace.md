@@ -1,7 +1,7 @@
-# Sprint 17 – Guided Delivery Workspace
+# Epic 03 – Guided Delivery Workspace
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 16 application shell
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 02 application shell
 
 ## Goal
 

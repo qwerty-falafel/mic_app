@@ -1,9 +1,10 @@
-# Epic – Guided Product Delivery UX
+# Product Initiative – Guided Product Delivery UX
 
 **Product:** MIC
 **Product Goal:** A user can understand, guide, review, and advance BMAD delivery without learning BMAD's internal commands or losing access to expert controls.
-**Research:** [Guided Product Delivery UX Research](../docs/guided-product-delivery-ux-research.md)
-**Depends on:** Sprint 14 planning rehearsal and its recorded UX findings
+**Feature:** Guided product delivery — MIC's persistent capability for turning a Brief into transparent, controllable, evidence-backed delivery.
+**Research:** [Guided Product Delivery UX Research](../../docs/guided-product-delivery-ux-research.md)
+**Evidence source:** Historical Sprint 14 planning rehearsal and its recorded UX findings
 
 ## Problem
 
@@ -22,6 +23,7 @@ The interface uses human product language first and BMAD skill names as provenan
 ```text
 Product
 ├── Product Goal and goal history
+├── Features and capability lifecycle
 ├── Repositories
 ├── Product Backlog
 ├── Delivery Case
@@ -48,7 +50,7 @@ Epics decompose into stories or other ready backlog items. Sprints pull ready ba
 7. Bind every approval and feedback request to an exact revision and state the transition it causes.
 8. Preserve the native differences between BMAD planning paths.
 9. Prevent invalid actions in the UI and return local, actionable failure messages for races or external changes.
-10. Validate every sprint through a usable browser journey rather than component presence alone.
+10. Validate every delivery increment through a usable browser journey rather than component presence alone.
 
 ## Principal journeys
 
@@ -97,17 +99,20 @@ Review, evidence, walkthrough, retrospective, and integration appear as guided s
 - Styling polish without information-architecture or interaction value.
 - Resuming TTS feature implementation before the new planning-review journey is usable.
 
-## Ordered sprints
+## Delivery epics
 
-1. [Sprint 15 – Product Language and Lifecycle Truth](./15-product-language-and-lifecycle-truth.md)
-2. [Sprint 16 – Route-backed Application Shell](./16-route-backed-application-shell.md)
-3. [Sprint 17 – Guided Delivery Workspace](./17-guided-delivery-workspace.md)
-4. [Sprint 18 – Planning and Artifact Decisions](./18-planning-and-artifact-decisions.md)
-5. [Sprint 19 – Conversations, Runs, and Activity](./19-conversations-runs-and-activity.md)
-6. [Sprint 20 – Backlog, Epics, Stories, and Sprint Tracking](./20-backlog-epics-stories-and-sprint-tracking.md)
-7. [Sprint 21 – Responsive Recovery and Journey Validation](./21-responsive-recovery-and-journey-validation.md)
-8. [Sprint 22 – TTS Guided-flow Acceptance](./22-tts-guided-flow-acceptance.md)
+These are backlog structure, not a Sprint schedule. Each epic must be refined into stories. Actual Sprints later select ready stories across these epics around one Sprint Goal.
 
-## Epic exit
+
+1. [Epic 01 – Product Language and Lifecycle Truth](./epic-01-product-language-and-lifecycle-truth.md)
+2. [Epic 02 – Route-backed Application Shell](./epic-02-route-backed-application-shell.md)
+3. [Epic 03 – Guided Delivery Workspace](./epic-03-guided-delivery-workspace.md)
+4. [Epic 04 – Planning and Artifact Decisions](./epic-04-planning-and-artifact-decisions.md)
+5. [Epic 05 – Conversations, Runs, and Activity](./epic-05-conversations-runs-and-activity.md)
+6. [Epic 06 – Backlog, Epics, Stories, and Sprint Tracking](./epic-06-backlog-epics-stories-and-sprint-tracking.md)
+7. [Epic 07 – Responsive Recovery and Journey Validation](./epic-07-responsive-recovery-and-journey-validation.md)
+8. [Epic 08 – TTS Guided-flow Acceptance](./epic-08-tts-guided-flow-acceptance.md)
+
+## Initiative exit
 
 The TTS delivery case resumes at its existing valid planning checkpoint in the redesigned PWA. Michael can understand its current state, review or revise the spec, trigger the correct breakdown, inspect its stories, and advance one story without seeing a raw operation dropdown or an invalid prerequisite action. The final evidence separates MIC UX acceptance from TTS feature acceptance.

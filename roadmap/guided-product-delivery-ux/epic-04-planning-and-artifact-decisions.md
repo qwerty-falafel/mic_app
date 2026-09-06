@@ -1,7 +1,7 @@
-# Sprint 18 – Planning and Artifact Decisions
+# Epic 04 – Planning and Artifact Decisions
 
-**Epic:** [Guided Product Delivery UX](./epic-guided-product-delivery-ux.md)
-**Depends on:** Sprint 17 guided workspace
+**Initiative:** [Guided Product Delivery UX](./README.md)
+**Depends on:** Epic 03 guided workspace
 
 ## Goal
 
