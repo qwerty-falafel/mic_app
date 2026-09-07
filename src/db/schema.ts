@@ -17,8 +17,8 @@ export const features = pgTable('features', {
 }, table => [uniqueIndex('features_project_slug_idx').on(table.projectId, table.slug), index('features_project_status_idx').on(table.projectId, table.status)]);
 
 export const productEpics = pgTable('product_epics', {
-  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), slug: text('slug').notNull(), name: text('name').notNull(), outcome: text('outcome').notNull().default(''), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, table => [uniqueIndex('product_epics_project_slug_idx').on(table.projectId, table.slug), index('product_epics_project_status_idx').on(table.projectId, table.status)]);
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), workstreamId: text('workstream_id'), slug: text('slug').notNull(), name: text('name').notNull(), outcome: text('outcome').notNull().default(''), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('product_epics_project_slug_idx').on(table.projectId, table.slug), index('product_epics_project_status_idx').on(table.projectId, table.status), uniqueIndex('product_epics_workstream_idx').on(table.workstreamId)]);
 
 export const goalFeatures = pgTable('goal_features', {
   goalId: text('goal_id').notNull().references(() => productGoals.id, { onDelete: 'cascade' }), featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }), createdAt: createdAt(),

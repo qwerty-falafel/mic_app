@@ -123,6 +123,11 @@ describe('product model and delivery lifecycle projection', () => {
       attentionCount: 0,
       nextAction: null,
     }));
+    for (const section of ['roadmap', 'briefs', 'backlog', 'board', 'sprints', 'releases', 'activity', 'settings']) {
+      const document = await app.inject({ method: 'GET', url: `/products/${product.slug}/${section}`, headers: { accept: 'text/html' } });
+      expect(document.statusCode).toBe(200);
+      expect(document.headers['content-type']).toContain('text/html');
+    }
   });
 
   it('keeps Brief proposals revision-bound and applies only an accepted revision', async () => {

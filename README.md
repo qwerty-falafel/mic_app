@@ -2,7 +2,7 @@
 
 This repository contains the executable Morgan's Intelligent Control (MIC) application: its API, PWA, database schema and migrations, tests, BMAD/OpenCode integration, and local operating scripts.
 
-Product policy, assessments, architecture direction, epics, Sprints, and delivery evidence live in the sibling [`../mic_product_development`](../mic_product_development) repository. The active work is the [Guided Product Delivery UX Epic](../mic_product_development/epics/001-guided-product-delivery-ux.md), currently in [Sprint 03](../mic_product_development/sprints/001-guided-product-delivery-ux/sprint-03-guided-delivery-workspace.md). MIC's canonical vocabulary is [Scrum and Product Terminology](../mic_product_development/policy/scrum-and-product-terminology.md).
+Product policy, assessments, architecture direction, epics, Sprints, and delivery evidence live in the sibling [`../mic_product_development`](../mic_product_development) repository. The current implementation is [Product Portfolio and AI-Guided Delivery](../mic_product_development/epics/002-product-portfolio-and-ai-guided-delivery.md). MIC's canonical vocabulary is [Scrum and Product Terminology](../mic_product_development/policy/scrum-and-product-terminology.md).
 
 The physical machine's hardware and host configuration are documented separately in [`../machine_setup`](../machine_setup). MIC does not own that machine configuration.
 
@@ -50,15 +50,15 @@ Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, 
 
 Stop the combined development server with `Ctrl-C`. The next `npm run dev` reuses the same local database.
 
-## Use the BMAD control plane
+## Use MIC
 
-1. Open **Projects**, create or select a project, and attach an existing clean Git repository by absolute path.
-2. Select **Inspect BMAD** to view the installed catalog, version, modules, settings, and output paths.
-3. Create work from a brief. MIC recommends a delivery path while allowing an explicit override.
-4. Run the recommended installed BMAD operation and follow its durable conversation. A workflow needs an answer only when it says **Waiting for input** or **Blocked**.
-5. Refresh the artifact index after a workflow writes files. Review the latest immutable revision, then accept it or request a revision with concrete feedback.
-6. For a spec-backed epic, accept `SPEC.md`, create and review the story breakdown, then dispatch eligible stories individually.
-7. Review implementation evidence and make integration an explicit final decision.
+1. Open **Products** to resume an enduring Product or create one from its name, purpose, and proposed Product Goal. A repository is optional at this stage.
+2. Use **Roadmap** to relate the current Product Goal to persistent Features and temporary Epics. It is an outcome hierarchy and does not invent dates.
+3. Use **Briefs** to ask GPT-OSS 120B for a reasoned proposal. Request revisions or reject it; only accepting the exact proposal revision creates proposed Product Backlog Items.
+4. Order and refine Stories, Defects, and Discoveries in **Backlog**. Use **Board** for their flow status and **Sprints** for explicit timeboxed selection around one Sprint Goal.
+5. Configure Git repositories and create a Delivery Case from **Product settings**. MIC then recommends a development path while allowing an explicit override.
+6. Follow the durable delivery conversation. A workflow needs an answer only when it says **Waiting for input** or **Blocked**. Review an immutable artifact revision before accepting it or requesting changes.
+7. Inspect usable Increments in **Releases**, consequential events in **Activity**, and make final integration an explicit decision.
 
 Requesting an artifact revision records feedback against the exact revision and returns the work to the artifact's owning workflow. It does not approve the document. Starting a new reading or workflow session must not silently reuse stale output from an earlier session.
 

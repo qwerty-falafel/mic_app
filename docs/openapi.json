@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "MIC BMAD-native API",
-    "version": "0.13.0",
-    "description": "Local control plane for discovered BMAD workflows, durable conversations, immutable artifacts, story delivery and explicit Git integration."
+    "title": "MIC Product Development API",
+    "version": "0.14.0",
+    "description": "Local AI-guided Product development control plane with Product direction, Brief proposals, Scrum delivery, durable workflows, immutable artifacts and explicit integration."
   },
   "servers": [
     {
@@ -1604,6 +1604,619 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "Get products",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Post products",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Get products {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch products {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/roadmap": {
+      "get": {
+        "summary": "Get products {id} roadmap",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/goals": {
+      "post": {
+        "summary": "Post products {id} goals",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-goals/{id}/status": {
+      "post": {
+        "summary": "Post product-goals {id} status",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-goals/{id}/features": {
+      "post": {
+        "summary": "Post product-goals {id} features",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/features": {
+      "post": {
+        "summary": "Post products {id} features",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/features/{id}": {
+      "patch": {
+        "summary": "Patch features {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/epics": {
+      "post": {
+        "summary": "Post products {id} epics",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-epics/{id}": {
+      "patch": {
+        "summary": "Patch product-epics {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-epics/{id}/features": {
+      "post": {
+        "summary": "Post product-epics {id} features",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/briefs": {
+      "get": {
+        "summary": "Get products {id} briefs",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Post products {id} briefs",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/briefs/{id}/analyse": {
+      "post": {
+        "summary": "Post briefs {id} analyse",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-proposals/{id}/decisions": {
+      "post": {
+        "summary": "Post product-proposals {id} decisions",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-backlog": {
+      "get": {
+        "summary": "Get product-backlog",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Post product-backlog",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-backlog/{id}": {
+      "get": {
+        "summary": "Get product-backlog {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch product-backlog {id}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/product-backlog/{id}/status": {
+      "post": {
+        "summary": "Post product-backlog {id} status",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/backlog-order": {
+      "put": {
+        "summary": "Put products {id} backlog-order",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints": {
+      "get": {
+        "summary": "Get scrum-sprints",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Post scrum-sprints",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints/{id}/items": {
+      "post": {
+        "summary": "Post scrum-sprints {id} items",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints/{id}/items/{itemId}": {
+      "delete": {
+        "summary": "Delete scrum-sprints {id} items {itemId}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints/{id}/status": {
+      "post": {
+        "summary": "Post scrum-sprints {id} status",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints/{id}/review": {
+      "put": {
+        "summary": "Put scrum-sprints {id} review",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/scrum-sprints/{id}/retrospective": {
+      "put": {
+        "summary": "Put scrum-sprints {id} retrospective",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/increments": {
+      "get": {
+        "summary": "Get increments",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Post increments",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/products/{id}/activity": {
+      "get": {
+        "summary": "Get products {id} activity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "409": {
+            "description": "State conflict"
           }
         }
       }
