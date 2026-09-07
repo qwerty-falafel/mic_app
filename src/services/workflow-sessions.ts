@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cp, access, writeFile } from 'node:fs/promises';
+import { cp, access, mkdir, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EventEmitter } from 'node:events';
@@ -14,6 +14,7 @@ import { WorkstreamService } from './workstreams.js';
 import { localMemory } from './resource-monitor.js';
 
 const sharedBmadRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../_bmad');
+const micRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const exec = promisify(execFile);
 
 export function conversationFromJsonl(stdout: string) {
@@ -86,6 +87,11 @@ export class WorkflowSessionService {
         await writeFile(resolve(workspace, '_bmad/config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository.path))}\nuser_name = "Michael"\ncommunication_language = "English"\ndocument_output_language = "English"\noutput_folder = ${JSON.stringify(resolve(workspace, '_bmad-output'))}\n\n[modules.bmm]\nuser_skill_level = "intermediate"\nplanning_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/planning-artifacts'))}\nimplementation_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/implementation-artifacts'))}\nproject_knowledge = ${JSON.stringify(resolve(workspace, 'docs'))}\n`);
       }
     }
+    await mkdir(resolve(workspace, '.agents'), { recursive: true });
+    await mkdir(resolve(workspace, '.opencode'), { recursive: true });
+    await cp(resolve(micRoot, '.agents/skills'), resolve(workspace, '.agents/skills'), { recursive: true, force: true });
+    await cp(resolve(micRoot, '.opencode/commands'), resolve(workspace, '.opencode/commands'), { recursive: true, force: true });
+    try { await symlink('../.agents/skills', resolve(workspace, '.opencode/skills'), 'dir'); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
     const [row] = await this.db.transaction(async tx => {
       const [created] = await tx.insert(workflowSessions).values({ id: sessionId, workstreamId: stream.id, definitionId: definition.id, storyUnitId: input.storyUnitId, skill: input.skill, action: input.action, args: input.args ?? {}, prompt: input.prompt, status: 'QUEUED', rawState: { workspace } }).returning();
       if (input.storyUnitId) await tx.update(storyUnits).set({ status: 'queued', updatedAt: new Date() }).where(eq(storyUnits.id, input.storyUnitId));
@@ -124,7 +130,7 @@ export class WorkflowSessionService {
     const status = preserveControlState(persisted?.status, observedStatus);
     const workspace = String(result.rawAdapterState.worktree ?? '');
     if (workspace) {
-      await exec('git', ['-C', workspace, 'add', '-A', '--', '.', ':(exclude)_bmad', ':(exclude).mic']);
+      await exec('git', ['-C', workspace, 'add', '-A', '--', '.', ':(exclude)_bmad', ':(exclude).mic', ':(exclude).agents', ':(exclude).opencode']);
       const staged = (await exec('git', ['-C', workspace, 'diff', '--cached', '--name-only'])).stdout.trim();
       if (staged) await exec('git', ['-C', workspace, '-c', 'user.name=MIC', '-c', 'user.email=mic@localhost', 'commit', '-m', `MIC ${session.skill} ${session.id}`]);
       result.repositoryRevisions.result = (await exec('git', ['-C', workspace, 'rev-parse', 'HEAD'])).stdout.trim();

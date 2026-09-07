@@ -41,7 +41,8 @@ describe('BMAD catalog and generic runner', () => {
       expect(result.workflow.skill).toBe(skill);
       expect(result.status).toBe('done');
     }
-    expect(commands).toEqual(['bmad-help', 'bmad-spec']);
+    await runner.execute({ runId: 'story-breakdown', skill: 'bmad-spec', action: 'create-stories', prompt: 'fixture', repository: root, workspace: root, baseline, model: 'fixture/model' });
+    expect(commands).toEqual(['bmad-help', 'bmad-spec', 'bmad-spec-stories']);
     await expect(runner.execute({ runId: 'bad', skill: '../shell', prompt: 'x', repository: root, workspace: root, baseline, model: 'fixture/model' })).rejects.toThrow('Invalid BMAD skill');
   });
 });

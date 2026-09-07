@@ -7,7 +7,7 @@ import type { RunResult } from '../types.js';
 import { OpenCodeAdapter } from './opencode.js';
 
 const exec = promisify(execFile);
-const ignored = new Set(['.git', '.mic', 'node_modules', '.bmad-loop']);
+const ignored = new Set(['.git', '.mic', '.agents', '.opencode', '_bmad', 'node_modules', '.bmad-loop']);
 
 async function files(root: string, dir = root): Promise<string[]> {
   const result: string[] = [];
@@ -57,7 +57,8 @@ export class BmadRunnerAdapter {
     if (!/^bmad-[a-z0-9-]+$/.test(input.skill)) throw new Error(`Invalid BMAD skill: ${input.skill}`);
     const before = await snapshot(input.workspace);
     const details = [input.action ? `Action: ${input.action}.` : '', Object.keys(input.args ?? {}).length ? `Arguments: ${JSON.stringify(input.args)}.` : '', input.prompt].filter(Boolean).join('\n');
-    this.harness.dispatch({ runId: input.runId, cwd: input.workspace, model: input.model, command: input.providerSessionId ? undefined : input.skill, sessionId: input.providerSessionId, timeoutMs: input.timeoutMs, prompt: details });
+    const command = input.skill === 'bmad-spec' && input.action === 'create-stories' ? 'bmad-spec-stories' : input.skill;
+    this.harness.dispatch({ runId: input.runId, cwd: input.workspace, model: input.model, command: input.providerSessionId ? undefined : command, sessionId: input.providerSessionId, timeoutMs: input.timeoutMs, prompt: details });
     const observed = await this.harness.observe(input.runId, true);
     const after = await snapshot(input.workspace);
     const artifactRefs = [...after].filter(([path, hash]) => before.get(path) !== hash).map(([path]) => path);

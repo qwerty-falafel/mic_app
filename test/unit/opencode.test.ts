@@ -31,7 +31,7 @@ describe('OpenCodeAdapter', () => {
     expect(observation.status).toBe('cancelled');
     expect(observation.stdout.trim().split('\n')).toEqual([
       resolve(process.cwd(), 'opencode.json'),
-      resolve(process.cwd(), '.opencode'),
+      resolve(root, '.opencode'),
     ]);
     const recovered = await new OpenCodeAdapter().recover('cancel-run', root);
     expect(recovered).toMatchObject({ runId: 'cancel-run', status: 'cancelled', signal: 'SIGTERM' });

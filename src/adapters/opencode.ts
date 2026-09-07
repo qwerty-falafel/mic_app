@@ -6,7 +6,6 @@ import type { ExecutionRequest } from '../types.js';
 
 const micRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const defaultConfigPath = resolve(micRoot, 'opencode.json');
-const defaultConfigDir = resolve(micRoot, '.opencode');
 
 export interface HarnessObservation { runId: string; status: 'running' | 'done' | 'failed' | 'cancelled'; exitCode: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string; startedAt: string; finishedAt?: string }
 
@@ -26,7 +25,10 @@ export class OpenCodeAdapter {
     const env = {
       ...process.env,
       OPENCODE_CONFIG: process.env.OPENCODE_CONFIG ?? defaultConfigPath,
-      OPENCODE_CONFIG_DIR: process.env.OPENCODE_CONFIG_DIR ?? defaultConfigDir,
+      // Commands and skills are provisioned inside each isolated worktree.
+      // Binding the config directory to MIC's own checkout makes BMAD resolve
+      // that checkout as the project root and defeats worktree isolation.
+      OPENCODE_CONFIG_DIR: resolve(request.cwd, '.opencode'),
     };
     const child = spawn('opencode', args, { cwd: request.cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const observation: HarnessObservation = { runId: request.runId, status: 'running', exitCode: null, signal: null, stdout: '', stderr: '', startedAt: new Date().toISOString() };
