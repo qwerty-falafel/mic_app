@@ -133,6 +133,17 @@ function CurrentTask(p: Row) {
     return <div className="currentTask"><small>CURRENT TASK</small><h2>{lc.currentStage?.label}</h2><p className="currentReason">{lc.reason}</p><div className="ownershipStrip"><span><b>BMAD</b> plans, builds, and produces technical review evidence</span><span><b>MIC</b> preserves state and enforces your exact-revision approvals</span></div>{lc.attention && <div className="attentionTarget"><small>NEEDS ATTENTION</small><b>{lc.attention.label}</b><Status value={lc.attention.status ?? lc.currentStage.state} /></div>}{recommended && <section className="primaryAction"><small>RECOMMENDED NEXT ACTION</small><h3>{recommended.label}</h3><p>{recommended.description}</p><p><strong>After this:</strong> {lc.stages?.find((x: Row) => x.id === recommended.transition)?.label ?? recommended.transition}</p><button disabled={!recommended.eligible} onClick={() => void p.act(recommended.label, () => perform(recommended))}>{recommended.label}</button>{recommended.reason && <small>{recommended.reason}</small>}</section>}<details className="briefDisclosure"><summary>Original Brief</summary><div className="document"><Markdown source={lc.delivery.brief} /></div></details><details className="advancedDisclosure"><summary>Advanced actions</summary>{lc.alternativeActions?.map((candidate: Row) => <div className="alternativeAction" key={candidate.id}><div><b>{candidate.label}</b><p>{candidate.description}</p>{!candidate.eligible && <small>{candidate.reason}</small>}</div><button className="secondary" disabled={!candidate.eligible} onClick={() => void p.act(candidate.label, () => perform(candidate))}>Open</button></div>)}</details></div>;
 }
 
+function sessionFailureReason(session: Row) {
+    const raw = session.rawState?.rawAdapterState ?? session.rawState ?? {};
+    if (typeof raw.error === 'string' && raw.error.trim()) return raw.error;
+    const lines = String(raw.stdout ?? '').split(/\r?\n/).filter(Boolean).reverse();
+    for (const line of lines) try {
+        const event = JSON.parse(line), message = event?.error?.data?.message ?? event?.error?.message;
+        if (typeof message === 'string' && message.trim()) return message;
+    } catch {}
+    return 'The workflow process exited unsuccessfully. Open Logs for the captured technical output.';
+}
+
 function sessionTitle(session: Row) {
     const purpose = session.skill === 'bmad-spec' && session.action === 'create-stories' ? 'Story Breakdown' : session.skill === 'bmad-spec' ? 'Specification' : session.skill === 'bmad-build' ? 'Attended Build' : session.skill === 'bmad-build-auto' ? 'Build Auto' : session.skill.replace(/^bmad-/, '').replaceAll('-', ' ');
     const result = session.status === 'FINISHED' ? 'complete' : session.status === 'WAITING_FOR_INPUT' ? 'awaiting your answer' : session.status.toLowerCase().replaceAll('_', ' ');
@@ -152,6 +163,7 @@ function Session(p: Row) {
       : s.status === 'NEEDS_CLASSIFICATION' ? { title: 'MIC cannot prove the outcome', reason: 'The process exited without a changed terminal artifact or a clear human question.', next: 'Classify the response from the evidence below; classification does not approve an artifact.' }
       : s.status === 'PAUSED' ? { title: 'Paused at a checkpoint', reason: 'The provider session and worktree remain available.', next: 'Resume continues this operation from its preserved checkpoint.' }
       : s.status === 'INTERRUPTED' ? { title: 'Execution was interrupted', reason: 'MIC restarted while this operation was active.', next: 'Resume reconnects to the durable provider session and existing worktree.' }
+      : s.status === 'FAILED' ? { title: 'Workflow stopped with an error', reason: sessionFailureReason(s), next: 'Resolve the stated cause, then choose Resume from checkpoint. MIC will reuse this conversation and its accepted decisions.' }
       : { title: 'This operation is complete', reason: 'This session is retained as delivery history.', next: 'Open its output or return to the current guided task.' };
     const placeholder = s.skill === 'bmad-spec' ? 'State the exact requirement that is wrong or missing, and the result you need in the next revision…' : 'Answer the concrete question above in plain language…';
     const tabs = ['conversation', 'outputs', 'logs', 'details'];
