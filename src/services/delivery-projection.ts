@@ -24,9 +24,9 @@ const templates: Record<string, { id: string; label: string }[]> = {
   ],
 };
 
-function stageForSkill(skill?: string) {
+function stageForSkill(skill?: string, operation?: string | null) {
   if (!skill) return undefined;
-  if (skill === 'bmad-spec') return 'specification';
+  if (skill === 'bmad-spec') return operation === 'create-stories' ? 'story-plan' : 'specification';
   if (skill === 'bmad-create-epics-and-stories' || skill === 'bmad-sprint-planning') return skill === 'bmad-sprint-planning' ? 'bmad-tracking' : 'epics-stories';
   if (skill === 'bmad-product-brief' || skill === 'bmad-prd') return 'product-planning';
   if (skill === 'bmad-ux' || skill === 'bmad-architecture') return 'solution-planning';
@@ -72,9 +72,9 @@ export class DeliveryProjectionService {
     let attention: Record<string, unknown> | null = null;
 
     if (integrated) { currentId = 'integration'; state = 'complete'; reason = 'The accepted result has been integrated.'; }
-    else if (invalid) { currentId = stageForSkill(active?.skill) ?? (invalid.type === 'spec' ? 'specification' : currentId); state = 'needs-attention'; reason = `The current ${invalid.path} revision is invalid and must be corrected.`; attention = { type: 'artifact', id: invalid.id, label: invalid.path }; }
+    else if (invalid) { currentId = stageForSkill(active?.skill, active?.action) ?? (invalid.type === 'spec' ? 'specification' : currentId); state = 'needs-attention'; reason = `The current ${invalid.path} revision is invalid and must be corrected.`; attention = { type: 'artifact', id: invalid.id, label: invalid.path }; }
     else if (active) {
-      currentId = stageForSkill(active.skill) ?? currentId;
+      currentId = stageForSkill(active.skill, active.action) ?? currentId;
       state = active.status === 'WAITING_FOR_INPUT' ? 'awaiting-decision' : active.status === 'BLOCKED' ? 'blocked' : active.status === 'PAUSED' || active.status === 'INTERRUPTED' || active.status === 'NEEDS_CLASSIFICATION' ? 'needs-attention' : 'active';
       reason = state === 'active' ? `${active.skill} is ${active.status.toLowerCase().replaceAll('_', ' ')}; no response is required yet.` : `${active.skill} requires attention before it can continue.`;
       attention = { type: 'session', id: active.id, label: active.skill, status: active.status };

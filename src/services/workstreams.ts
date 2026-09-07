@@ -66,8 +66,14 @@ export class WorkstreamService {
 
   async requireDefinition(repositoryId: string, skill: string, action?: string) {
     const rows = await this.db.select().from(workflowDefinitions).where(and(eq(workflowDefinitions.repositoryId, repositoryId), eq(workflowDefinitions.skill, skill)));
-    const row = rows.find(candidate => (candidate.action ?? undefined) === action) ?? (action ? undefined : rows[0]);
+    const supportsAction = !action || (skill === 'bmad-spec' && action === 'create-stories');
+    const row = supportsAction ? rows.find(candidate => (candidate.action ?? undefined) === action) ?? rows.find(candidate => !candidate.action) : undefined;
     if (!row) throw new Error(`BMAD skill/action is unavailable: ${skill}${action ? `:${action}` : ''}`);
     return row;
+  }
+
+  operationIsEligible(definitions: Array<{ skill: string; action: string | null }>, skill: string, action?: string) {
+    if (action && !(skill === 'bmad-spec' && action === 'create-stories')) return false;
+    return definitions.some(row => row.skill === skill && ((row.action ?? undefined) === action || (Boolean(action) && !row.action)));
   }
 }

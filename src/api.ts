@@ -51,8 +51,8 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   const lifecycle = executor ? new LifecycleService(db, executor) : undefined;
   const catalog = new BmadCatalogService(db);
   const streams = new WorkstreamService(db);
-  const sessions = new WorkflowSessionService(db, process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16');
   const artifacts = new ArtifactService(db);
+  const sessions = new WorkflowSessionService(db, process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16', undefined, undefined, streams, async (workstreamId, sessionId) => { await artifacts.index(workstreamId, sessionId); });
   const stories = new StoryDeliveryService(db);
   const products = new ProductService(db);
   const delivery = new DeliveryProjectionService(db);
@@ -194,7 +194,25 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.get('/artifacts/:id/download', async (request, reply) => { const { id: artifactId } = z.object({ id }).parse(request.params); const [artifact] = await db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactId)); return artifact ? reply.header('content-disposition', `attachment; filename="${artifact.path.split('/').at(-1)}"`).type('text/plain').send(artifact.content) : reply.code(404).send({ error: 'not_found' }); });
   app.get('/workstreams/:id/artifact-graph', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return artifacts.graph(workstreamId); });
   app.get('/artifact-diff', async request => { const query = z.object({ from: id, to: id }).parse(request.query); return artifacts.diff(query.from, query.to); });
-  app.post('/artifacts/:id/reviews', async request => { const { id: artifactId } = z.object({ id }).parse(request.params); const body = z.object({ kind: z.enum(['accepted', 'rejected', 'feedback', 'override']), feedback: z.string().trim().optional(), actor: id }).parse(request.body); return artifacts.review(artifactId, body); });
+  app.post('/artifacts/:id/reviews', async (request, reply) => {
+    const { id: artifactId } = z.object({ id }).parse(request.params);
+    const body = z.object({ kind: z.enum(['accepted', 'rejected', 'feedback', 'override']), feedback: z.string().trim().optional(), actor: id }).parse(request.body);
+    const decision = await artifacts.review(artifactId, body);
+    if (body.kind !== 'accepted') return decision;
+    const [artifact] = await db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactId));
+    if (artifact?.type === 'story-inventory') return { decision, storyPlan: await stories.sync(artifact.workstreamId) };
+    if (artifact?.type !== 'spec') return decision;
+    const existing = await db.select().from(workflowSessions).where(and(eq(workflowSessions.workstreamId, artifact.workstreamId), eq(workflowSessions.skill, 'bmad-spec'), eq(workflowSessions.action, 'create-stories'))).orderBy(desc(workflowSessions.createdAt)).limit(1);
+    if (existing.some(session => ['QUEUED', 'RESOURCE_WAITING', 'RUNNING', 'WAITING_FOR_INPUT', 'BLOCKED', 'PAUSED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION', 'FINISHED'].includes(session.status))) return { decision, session: existing[0] };
+    const session = await sessions.start({
+      workstreamId: artifact.workstreamId,
+      skill: 'bmad-spec',
+      action: 'create-stories',
+      args: { artifactPath: artifact.path, artifactRevisionId: artifact.id, artifactHash: artifact.contentHash, interactionMode: 'attended' },
+      prompt: `Start BMAD Story Breakdown for the accepted specification ${artifact.path} at exact revision ${artifact.id} (${artifact.contentHash}). This is an attended BMAD conversation carried through MIC: ask for the human judgements required by Story Breakdown, preserve the session between replies, and produce stories.yaml only after those judgements are resolved.`,
+    }, body.actor);
+    return reply.code(202).send({ decision, session });
+  });
   app.post('/artifacts/:id/feedback', async (request, reply) => {
     const { id: artifactId } = z.object({ id }).parse(request.params); const body = z.object({ feedback: z.string().trim().min(1), actor: id }).parse(request.body);
     const [artifact] = await db.select().from(artifactRevisions).where(eq(artifactRevisions.id, artifactId));

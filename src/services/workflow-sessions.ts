@@ -42,7 +42,7 @@ export class WorkflowSessionService {
   readonly events = new EventEmitter();
   private readonly pending: Array<{ sessionId: string; task: () => Promise<void> }> = [];
   private active = false;
-  constructor(private readonly db: Database, private readonly model: string, private readonly runner = new BmadRunnerAdapter(), private readonly trees = new WorktreeManager(), private readonly streams = new WorkstreamService(db)) {}
+  constructor(private readonly db: Database, private readonly model: string, private readonly runner = new BmadRunnerAdapter(), private readonly trees = new WorktreeManager(), private readonly streams = new WorkstreamService(db), private readonly artifactsChanged?: (workstreamId: string, sessionId: string) => Promise<void>) {}
 
   private publish(sessionId: string, event: Record<string, unknown>) { this.events.emit(sessionId, event); }
 
@@ -67,7 +67,7 @@ export class WorkflowSessionService {
     if (!repository) throw new Error('Repository not found');
     const eligible = await this.streams.operations(stream.id);
     const boundedStoryBuild = Boolean(input.storyUnitId && ['bmad-build', 'bmad-build-auto'].includes(input.skill));
-    if (!boundedStoryBuild && !eligible.some(row => row.skill === input.skill && (row.action ?? undefined) === input.action)) throw new Error(`BMAD operation is not eligible for the selected ${stream.path} path`);
+    if (!boundedStoryBuild && !this.streams.operationIsEligible(eligible, input.skill, input.action)) throw new Error(`BMAD operation is not eligible for the selected ${stream.path} path`);
     if (['bmad-build', 'bmad-build-auto'].includes(input.skill) && stream.path !== 'direct' && !input.storyUnitId) throw new Error('Epic and project work can enter Build only through one bounded Story');
     if (input.storyUnitId) {
       const [story] = await this.db.select().from(storyUnits).where(and(eq(storyUnits.id, input.storyUnitId), eq(storyUnits.workstreamId, stream.id)));
@@ -139,6 +139,7 @@ export class WorkflowSessionService {
       }
       await tx.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: session.id, action: status.toLowerCase(), actor: 'system', detail: { summary: result.summary, artifactRefs: result.artifactRefs }, idempotencyKey: `${session.id}:${existing.length}:${status}` }).onConflictDoNothing();
     });
+    if (status === 'FINISHED' && this.artifactsChanged) await this.artifactsChanged(session.workstreamId, session.id);
     this.publish(session.id, { type: 'turn', status, content: parsed.content, artifactRefs: result.artifactRefs });
   }
 
