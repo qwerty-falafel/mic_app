@@ -18,4 +18,8 @@ describe('value-shaped BMAD Story inventory', () => {
     const description = 'As a reader, I want to hear a document, so that I can absorb it. Covers CAP-1.';
     expect(analyseStoryInventory(`- id: "3"\n  title: Read\n  description: ${description}\n- id: "3-2"\n  title: Continue\n  description: ${description}\n`, spec).issues).toContain('Story ids must be prefix-free: 3');
   });
+  it('requires the accepted specification to be fully accounted for', () => {
+    const result = analyseStoryInventory('- id: "1"\n  title: Start listening\n  description: As a listener, I want to hear audio promptly, so that I can begin without waiting. Covers CAP-1.\n', spec);
+    expect(result.issues).toContain('stories.yaml does not account for governing capabilities: CAP-2');
+  });
 });

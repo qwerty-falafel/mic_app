@@ -37,5 +37,8 @@ export function analyseStoryInventory(content: string, specContent: string) {
   if (!value.length) issues.push('stories.yaml requires at least one Story');
   if (new Set(ids).size !== ids.length) issues.push('stories.yaml requires unique Story ids');
   for (const id of ids) if (ids.some(other => other !== id && other.startsWith(`${id}-`))) issues.push(`Story ids must be prefix-free: ${id}`);
+  const covered = new Set(stories.flatMap(story => story.capabilityIds));
+  const missing = [...available].filter(capability => !covered.has(capability));
+  if (missing.length) issues.push(`stories.yaml does not account for governing capabilities: ${missing.join(', ')}`);
   return { stories, issues: [...new Set(issues)], warnings };
 }
