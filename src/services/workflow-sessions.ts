@@ -36,6 +36,15 @@ export function awaitsInput(skill: string, content: string, artifactRefs: string
   return question || explicitRequest || menu;
 }
 
+export function reportsExecutionFailure(content: string) {
+  const normalized = content.replace(/\s+/g, ' ').trim();
+  return [
+    /\bi (?:was|am) unable to (?:complete|finish|implement|perform|make|apply)\b/i,
+    /\b(?:could not|couldn't|cannot|can't) (?:complete|finish|implement|perform|make|apply)\b/i,
+    /\b(?:failed|failure) to (?:complete|finish|implement|perform|make|apply)\b/i,
+  ].some(pattern => pattern.test(normalized));
+}
+
 export function preserveControlState(persisted: string | undefined, observed: string) {
   return persisted && ['PAUSED', 'CANCELLED', 'INTERRUPTED'].includes(persisted) ? persisted : observed;
 }
@@ -122,6 +131,12 @@ export class WorkflowSessionService {
     const runId = `${session.id}-${turns.length}`;
     try {
       const result = await this.runner.execute({ runId, skill: session.skill, action: session.action ?? undefined, args: session.args as Record<string, unknown>, prompt: turns.at(-1)!.content, repository, workspace, baseline, model: this.model, providerSessionId: session.providerSessionId ?? undefined });
+      const parsed = conversationFromJsonl(String(result.rawAdapterState.stdout ?? ''));
+      if (result.status === 'done' && reportsExecutionFailure(parsed.content)) {
+        result.status = 'failed';
+        result.summary = `${session.skill} reported that it could not complete the requested work`;
+        result.rawAdapterState = { ...result.rawAdapterState, reportedFailure: parsed.content };
+      }
       if (result.status === 'done' && ['bmad-build', 'bmad-build-auto'].includes(session.skill)) {
         const verification = await this.verifyBuild(workspace);
         result.rawAdapterState = { ...result.rawAdapterState, verification };

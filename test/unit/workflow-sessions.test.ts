@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awaitsInput, conversationFromJsonl, nodeVerificationScripts, preserveControlState, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
+import { awaitsInput, conversationFromJsonl, nodeVerificationScripts, preserveControlState, reportsExecutionFailure, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
 
 describe('durable workflow conversation contracts', () => {
   it('selects available Node verification commands and rejects malformed package data', () => {
@@ -32,6 +32,12 @@ describe('durable workflow conversation contracts', () => {
     expect(preserveControlState('CANCELLED', 'FAILED')).toBe('CANCELLED');
     expect(preserveControlState('INTERRUPTED', 'CANCELLED')).toBe('INTERRUPTED');
     expect(preserveControlState('RUNNING', 'FINISHED')).toBe('FINISHED');
+  });
+
+  it('recognizes explicit provider failure instead of treating it as completion', () => {
+    expect(reportsExecutionFailure('I was unable to complete the requested changes within the given time.')).toBe(true);
+    expect(reportsExecutionFailure('I could not finish implementing the requested behavior.')).toBe(true);
+    expect(reportsExecutionFailure('All requested changes are complete and the checks pass.')).toBe(false);
   });
 
   it('holds finished work for human outcome acceptance when requested', () => {
