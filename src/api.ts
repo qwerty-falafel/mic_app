@@ -26,7 +26,7 @@ import { DeliveryProjectionService } from './services/delivery-projection.js';
 import { ScrumService } from './services/scrum.js';
 
 const id = z.string().min(1);
-const projectInput = z.object({ name: z.string().min(1), definitionOfDone: z.string().trim().min(1).optional() });
+const projectInput = z.object({ name: z.string().trim().min(1), purpose: z.string().trim().optional(), status: z.enum(['active', 'archived']).optional(), definitionOfDone: z.string().trim().min(1).optional() });
 const repositoryInput = z.object({ path: z.string().min(1), role: z.string().min(1).optional(), baseBranch: z.string().min(1).optional() });
 const workItemInput = z.object({ projectId: id, title: z.string().min(1), intent: z.string().min(1), kind: z.string().optional(), state: z.string().optional(), priority: z.number().int().optional() });
 const runInput = z.object({ workItemId: id, kind: z.string().min(1), model: z.string().optional(), status: z.string().optional(), baselineRevision: z.string().optional() });
@@ -83,7 +83,13 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/runs', async (request, reply) => reply.code(201).send(await kernel.createRun(runInput.parse(request.body), key(request))));
   app.post('/questions', async (request, reply) => reply.code(201).send(await kernel.createQuestion(questionInput.parse(request.body), key(request))));
   app.get('/projects', async () => db.select().from(projects).orderBy(desc(projects.createdAt)));
-  app.get('/products', async (request, reply) => isBrowserDocumentRequest(request) && existsSync(frontend) ? reply.sendFile('index.html') : db.select().from(projects).orderBy(desc(projects.createdAt)));
+  app.get('/products', async (request, reply) => isBrowserDocumentRequest(request) && existsSync(frontend) ? reply.sendFile('index.html') : products.portfolio(id => delivery.get(id)));
+  app.post('/products', async (request, reply) => {
+    const body = projectInput.extend({ productGoal: z.string().trim().min(1).optional() }).parse(request.body);
+    const product = await kernel.createProject(body, key(request));
+    if (body.productGoal) await products.createGoal(product.id, body.productGoal, 'active');
+    return reply.code(201).send(await products.getByReference(product.id));
+  });
   app.get('/products/:reference', async (request, reply) => {
     if (isBrowserDocumentRequest(request) && existsSync(frontend)) return reply.sendFile('index.html');
     const { reference } = z.object({ reference: id }).parse(request.params);
@@ -99,6 +105,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/products/:id/features', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ name: z.string().trim().min(1), description: z.string().optional(), status: z.enum(['proposed', 'active', 'deprecated', 'retired']).optional() }).parse(request.body); return reply.code(201).send(await products.createFeature(projectId, body)); });
   app.post('/features/:id/deliveries', async (request, reply) => { const { id: featureId } = z.object({ id }).parse(request.params); const { workstreamId } = z.object({ workstreamId: id }).parse(request.body); return reply.code(201).send(await products.linkFeature(featureId, workstreamId)); });
   app.post('/products/:id/definition-of-done', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const { definitionOfDone } = z.object({ definitionOfDone: z.string().trim().min(1) }).parse(request.body); return products.updateDefinitionOfDone(projectId, definitionOfDone); });
+  app.patch('/products/:id', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const body = projectInput.partial().parse(request.body); return products.updateProduct(projectId, body); });
   app.get('/product-backlog', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listBacklog(projectId); });
   app.post('/product-backlog', async (request, reply) => { const body = z.object({ projectId: id, featureId: id.optional(), workstreamId: id.optional(), storyUnitId: id.optional(), kind: z.enum(['change', 'epic', 'story', 'defect', 'research', 'correction']), title: z.string().trim().min(1), description: z.string().optional(), order: z.number().int().optional(), acceptanceCriteria: z.array(z.string().trim().min(1)).optional() }).parse(request.body); return reply.code(201).send(await scrum.createBacklogItem(body)); });
   app.post('/product-backlog/:id/status', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const { status } = z.object({ status: z.enum(['proposed', 'ready', 'in-progress', 'done', 'removed']) }).parse(request.body); return scrum.updateBacklogStatus(itemId, status); });

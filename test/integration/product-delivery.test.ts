@@ -96,4 +96,20 @@ describe('product model and delivery lifecycle projection', () => {
     expect(tooLong.statusCode).toBe(409);
     expect(tooLong.json()).toMatchObject({ error: 'scrum_constraint', message: expect.stringContaining('one month') });
   }, 30_000);
+
+  it('creates a Product without a repository and returns a server-owned portfolio projection', async () => {
+    const created = await app.inject({ method: 'POST', url: '/products', headers: { 'idempotency-key': 'portfolio-product' }, payload: { name: 'Research Library', purpose: 'Make research decisions traceable.', productGoal: 'Validate the first useful research workflow.' } });
+    expect(created.statusCode).toBe(201);
+    const product = created.json<any>();
+    const portfolio = (await app.inject({ method: 'GET', url: '/products' })).json<any[]>();
+    expect(portfolio).toContainEqual(expect.objectContaining({
+      product: expect.objectContaining({ id: product.id, purpose: 'Make research decisions traceable.', status: 'active' }),
+      activeGoal: expect.objectContaining({ statement: 'Validate the first useful research workflow.', status: 'active' }),
+      currentSprint: null,
+      repositoryCount: 0,
+      activeDeliveryCount: 0,
+      attentionCount: 0,
+      nextAction: null,
+    }));
+  });
 });

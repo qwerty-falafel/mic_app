@@ -28,7 +28,7 @@ export class Kernel {
     });
   }
 
-  createProject(input: { name: string; definitionOfDone?: string }, key: string = randomUUID()) { return this.create(projects, 'project', key, { ...input, slug: durableSlug(input.name, key) }); }
+  createProject(input: { name: string; purpose?: string; status?: string; definitionOfDone?: string }, key: string = randomUUID()) { return this.create(projects, 'project', key, { ...input, slug: durableSlug(input.name, key) }); }
   createRepository(input: { projectId: string; path: string; role?: string; baseBranch?: string }, key: string = randomUUID()) { return this.create(repositories, 'repository', key, input); }
   createWorkItem(input: { projectId: string; title: string; intent: string; kind?: string; state?: string; priority?: number }, key: string = randomUUID()) { return this.create(workItems, 'work_item', key, input); }
   createRun(input: { workItemId: string; kind: string; model?: string; status?: string; baselineRevision?: string }, key: string = randomUUID()) { return this.create(runs, 'run', key, input); }

@@ -4,6 +4,7 @@ const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull(
 
 export const projects = pgTable('projects', {
   id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), name: text('name').notNull(), slug: text('slug').notNull().unique(),
+  purpose: text('purpose').notNull().default(''), status: text('status').notNull().default('active'),
   definitionOfDone: text('definition_of_done').notNull().default('The accepted outcome is integrated, usable, verified against its acceptance criteria, and supported by recorded evidence.'), createdAt: createdAt(),
 });
 
