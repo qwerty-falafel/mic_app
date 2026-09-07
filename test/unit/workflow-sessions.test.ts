@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awaitsInput, conversationFromJsonl, preserveControlState } from '../../src/services/workflow-sessions.js';
+import { awaitsInput, conversationFromJsonl, preserveControlState, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
 
 describe('durable workflow conversation contracts', () => {
   it('extracts the provider session and assistant output from OpenCode JSONL', () => {
@@ -25,5 +25,11 @@ describe('durable workflow conversation contracts', () => {
     expect(preserveControlState('CANCELLED', 'FAILED')).toBe('CANCELLED');
     expect(preserveControlState('INTERRUPTED', 'CANCELLED')).toBe('INTERRUPTED');
     expect(preserveControlState('RUNNING', 'FINISHED')).toBe('FINISHED');
+  });
+
+  it('holds finished work for human outcome acceptance when requested', () => {
+    expect(storyStatusFromSession('FINISHED', true)).toBe('review');
+    expect(storyStatusFromSession('FINISHED', false)).toBe('done');
+    expect(storyStatusFromSession('WAITING_FOR_INPUT', true)).toBe('in-progress');
   });
 });

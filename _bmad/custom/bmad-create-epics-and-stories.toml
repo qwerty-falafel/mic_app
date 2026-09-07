@@ -1,0 +1,5 @@
+# Managed by MIC. Sparse project override for BMAD's installed story-planning skill.
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/mic-story-contract.md",
+]

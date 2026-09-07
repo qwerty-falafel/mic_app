@@ -9,6 +9,7 @@ import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
 import { artifactRevisions, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
 import { StoryDeliveryService } from '../../src/services/story-delivery.js';
+import { analyseStoryInventory } from '../../src/services/story-outcomes.js';
 
 async function freePort() {
   return new Promise<number>((resolvePort, reject) => {
@@ -165,7 +166,10 @@ describe('product model and delivery lifecycle projection', () => {
     const epic = (await app.inject({ method: 'POST', url: `/products/${product.id}/epics`, payload: { name: 'Accepted breakdown', outcome: 'Deliver bounded stories.' } })).json<any>();
     const stream = (await app.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'story-sync-stream' }, payload: { projectId: product.id, title: 'Accepted breakdown', intent: 'Plan and deliver bounded stories.', path: 'spec-epic' } })).json<any>();
     await connection.db.update(productEpics).set({ workstreamId: stream.id }).where(eq(productEpics.id, epic.id));
-    const [inventory] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v1', workstreamId: stream.id, path: '_bmad-output/specs/sync/stories.yaml', type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v1', content: 'stories:\n  - id: "1.1"\n    title: First bounded Story\n    description: Deliver the first useful outcome.\n    acceptanceCriteria:\n      - It is usable.\n', metadata: { valid: true } }).returning();
+    const storySpec = '# Capabilities\n## CAP-1 Useful outcome';
+    const firstContent = '- id: "1-1"\n  title: Receive the first useful outcome\n  description: As a research reader, I want to receive a cited result, so that I can use trustworthy evidence. Covers CAP-1.\n  spec_checkpoint: true\n  done_checkpoint: true\n  invoke_dev_with: Preserve citation provenance.\n';
+    const firstAnalysis = analyseStoryInventory(firstContent, storySpec);
+    const [inventory] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v1', workstreamId: stream.id, path: '_bmad-output/specs/sync/stories.yaml', type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v1', content: firstContent, metadata: { valid: true, storyOutcomes: firstAnalysis.stories, warnings: firstAnalysis.warnings } }).returning();
     const refused = await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} });
     expect(refused.statusCode).toBe(409);
     expect(refused.json()).toMatchObject({ message: expect.stringContaining('human approval') });
@@ -173,19 +177,26 @@ describe('product model and delivery lifecycle projection', () => {
     const sprintCountBefore = (await connection.db.select().from(scrumSprints)).length;
     const first = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
     expect(first.artifact).toMatchObject({ id: inventory!.id, contentHash: 'stories-v1', acceptedBy: 'Michael' });
-    expect(first.stories[0]).toMatchObject({ story: { storyKey: '1.1', parentArtifactId: inventory!.id }, backlogItem: { epicId: epic.id, sourceArtifactId: inventory!.id, sourceArtifactHash: 'stories-v1', sourceStoryKey: '1.1' } });
+    expect(first.stories[0]).toMatchObject({ story: { storyKey: '1-1', parentArtifactId: inventory!.id }, backlogItem: { epicId: epic.id, sourceArtifactId: inventory!.id, sourceArtifactHash: 'stories-v1', sourceStoryKey: '1-1' } });
+    expect(first.stories[0].backlogItem.value).toBe('I can use trustworthy evidence');
+    await expect(new StoryDeliveryService(connection.db).dispatch(first.stories[0].story.id, 'bmad-build-auto')).rejects.toThrow('requires attended BMAD Build');
+    const attended = await new StoryDeliveryService(connection.db).dispatch(first.stories[0].story.id, 'bmad-build');
+    expect(attended).toMatchObject({ args: { storyId: '1-1', specFolder: '_bmad-output/specs/sync', artifactRevisionId: inventory!.id, artifactHash: 'stories-v1' } });
+    expect(attended.prompt).toContain('Preserve citation provenance.');
     const second = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
     expect(second.stories[0].backlogItem.id).toBe(first.stories[0].backlogItem.id);
     expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toHaveLength(1);
     expect((await connection.db.select().from(scrumSprints)).length).toBe(sprintCountBefore);
 
-    const [revised] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v2', workstreamId: stream.id, path: inventory!.path, type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v2', content: 'stories:\n  - id: "1.1"\n    title: Revised bounded Story\n    description: Deliver the corrected useful outcome.\n', metadata: { valid: true }, createdAt: new Date(Date.now() + 1000) }).returning();
+    const revisedContent = '- id: "1-1"\n  title: Review the useful outcome\n  description: As a research reader, I want to review a cited result, so that I can trust the corrected evidence. Covers CAP-1.\n';
+    const revisedAnalysis = analyseStoryInventory(revisedContent, storySpec);
+    const [revised] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v2', workstreamId: stream.id, path: inventory!.path, type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v2', content: revisedContent, metadata: { valid: true, storyOutcomes: revisedAnalysis.stories, warnings: revisedAnalysis.warnings }, createdAt: new Date(Date.now() + 1000) }).returning();
     await connection.db.insert(reviewDecisions).values({ id: 'review_stories_v2', artifactRevisionId: revised!.id, kind: 'accepted', actor: 'Michael' });
     const revisedSync = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
-    expect(revisedSync.stories[0]).toMatchObject({ changedRevision: true, backlogItem: { id: first.stories[0].backlogItem.id, title: 'Revised bounded Story', sourceArtifactId: revised!.id, sourceArtifactHash: 'stories-v2' } });
+    expect(revisedSync.stories[0]).toMatchObject({ changedRevision: true, backlogItem: { id: first.stories[0].backlogItem.id, title: 'Review the useful outcome', sourceArtifactId: revised!.id, sourceArtifactHash: 'stories-v2' } });
     expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toHaveLength(1);
     const trace = (await app.inject({ method: 'GET', url: `/product-backlog/${first.stories[0].backlogItem.id}/trace` })).json<any>();
-    expect(trace).toMatchObject({ bmad: { story: { storyKey: '1.1' }, artifact: { id: revised!.id, contentHash: 'stories-v2' } }, scrum: { sprints: [], increments: [] } });
+    expect(trace).toMatchObject({ bmad: { story: { storyKey: '1-1' }, artifact: { id: revised!.id, contentHash: 'stories-v2' } }, scrum: { sprints: [], increments: [] } });
 
     await connection.db.insert(workflowSessions).values({ id: 'active_story_build', workstreamId: stream.id, storyUnitId: first.stories[0].story.id, skill: 'bmad-build', prompt: 'bounded', status: 'RUNNING' });
     await expect(new StoryDeliveryService(connection.db).dispatch(first.stories[0].story.id, 'bmad-build')).rejects.toThrow('already has an active BMAD Build session');

@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readdir, readFile, stat } from 'node:fs/promises';
+import { parse as parseYaml } from 'yaml';
 import { basename, dirname, relative, resolve, sep } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { parse as parseYaml } from 'yaml';
 import { and, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { artifactLinks, artifactRevisions, auditEvents, reviewDecisions, workflowSessions, workstreams } from '../db/schema.js';
+import { analyseStoryInventory } from './story-outcomes.js';
 
 const exec = promisify(execFile);
 const statuses = new Set(['draft', 'ready-for-dev', 'in-progress', 'review', 'done', 'complete', 'completed', 'blocked', 'backlog', 'optional', 'deferred']);
@@ -70,14 +71,14 @@ export class ArtifactService {
         const [prior] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path), or(isNull(artifactRevisions.status), ne(artifactRevisions.status, 'quarantined')))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
         if (prior && !content.startsWith(prior.content)) issues.push('Historical memlog content was modified; revisions must append');
       }
+      let storyAnalysis: ReturnType<typeof analyseStoryInventory> | undefined;
       if (parsed.type === 'story-inventory') {
-        try {
-          const value = parseYaml(content), list = Array.isArray(value) ? value : value?.stories;
-          const ids = Array.isArray(list) ? list.map(item => String(item?.id ?? '')) : [];
-          if (!ids.length || ids.some(id => !id) || new Set(ids).size !== ids.length) issues.push('stories.yaml requires unique, exact story identifiers');
-        } catch { issues.push('stories.yaml is not valid YAML'); }
+        const spec = created.find(row => row.path === `${dirname(path)}/SPEC.md`);
+        if (!spec) issues.push('stories.yaml requires its governing sibling SPEC.md');
+        storyAnalysis = analyseStoryInventory(content, spec?.content ?? '');
+        issues.push(...storyAnalysis.issues);
       }
-      const [row] = await this.db.insert(artifactRevisions).values({ id: `artifact_${randomUUID()}`, workstreamId, sessionId, path, type: parsed.type, status: issues.length ? 'quarantined' : parsed.status, contentHash: hash, content, repositoryRevision: revision, metadata: { ...parsed, valid: issues.length === 0, issues } }).returning();
+      const [row] = await this.db.insert(artifactRevisions).values({ id: `artifact_${randomUUID()}`, workstreamId, sessionId, path, type: parsed.type, status: issues.length ? 'quarantined' : parsed.status, contentHash: hash, content, repositoryRevision: revision, metadata: { ...parsed, valid: issues.length === 0, issues, ...(storyAnalysis ? { storyOutcomes: storyAnalysis.stories, warnings: storyAnalysis.warnings } : {}) } }).returning();
       created.push(row!);
     }
     await this.rebuildLinks(workstreamId, created);

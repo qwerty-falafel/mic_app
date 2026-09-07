@@ -12,6 +12,7 @@ import { BmadRunnerAdapter, type WorkflowRunResult } from '../adapters/bmad-runn
 import { WorktreeManager } from '../worktree.js';
 import { WorkstreamService } from './workstreams.js';
 import { localMemory } from './resource-monitor.js';
+import { provisionBmadCustomization } from './bmad-customization.js';
 
 const sharedBmadRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../_bmad');
 const micRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -37,6 +38,10 @@ export function awaitsInput(skill: string, content: string, artifactRefs: string
 
 export function preserveControlState(persisted: string | undefined, observed: string) {
   return persisted && ['PAUSED', 'CANCELLED', 'INTERRUPTED'].includes(persisted) ? persisted : observed;
+}
+
+export function storyStatusFromSession(status: string, doneCheckpoint: boolean) {
+  return status === 'FINISHED' ? (doneCheckpoint ? 'review' : 'done') : status === 'BLOCKED' ? 'blocked' : status === 'FAILED' ? 'review' : status === 'WAITING_FOR_INPUT' ? 'in-progress' : undefined;
 }
 
 export class WorkflowSessionService {
@@ -87,6 +92,7 @@ export class WorkflowSessionService {
         await writeFile(resolve(workspace, '_bmad/config.user.toml'), `[core]\nproject_name = ${JSON.stringify(basename(repository.path))}\nuser_name = "Michael"\ncommunication_language = "English"\ndocument_output_language = "English"\noutput_folder = ${JSON.stringify(resolve(workspace, '_bmad-output'))}\n\n[modules.bmm]\nuser_skill_level = "intermediate"\nplanning_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/planning-artifacts'))}\nimplementation_artifacts = ${JSON.stringify(resolve(workspace, '_bmad-output/implementation-artifacts'))}\nproject_knowledge = ${JSON.stringify(resolve(workspace, 'docs'))}\n`);
       }
     }
+    await provisionBmadCustomization(sharedBmadRoot, workspace);
     await mkdir(resolve(workspace, '.agents'), { recursive: true });
     await mkdir(resolve(workspace, '.opencode'), { recursive: true });
     await cp(resolve(micRoot, '.agents/skills'), resolve(workspace, '.agents/skills'), { recursive: true, force: true });
@@ -135,13 +141,16 @@ export class WorkflowSessionService {
       if (staged) await exec('git', ['-C', workspace, '-c', 'user.name=MIC', '-c', 'user.email=mic@localhost', 'commit', '-m', `MIC ${session.skill} ${session.id}`]);
       result.repositoryRevisions.result = (await exec('git', ['-C', workspace, 'rev-parse', 'HEAD'])).stdout.trim();
     }
+    const storyKey = (session.args as Record<string, unknown>)?.storyId;
+    const [relatedStory] = typeof storyKey === 'string' ? await this.db.select().from(storyUnits).where(and(eq(storyUnits.workstreamId, session.workstreamId), eq(storyUnits.storyKey, storyKey))) : [];
     await this.db.transaction(async tx => {
       if (parsed.content) await tx.insert(conversationTurns).values({ id: `turn_${randomUUID()}`, sessionId: session.id, sequence: existing.length + 1, role: 'assistant', content: parsed.content, metadata: { artifactRefs: result.artifactRefs } });
       await tx.update(workflowSessions).set({ status, providerSessionId: parsed.providerSessionId ?? session.providerSessionId, rawState: result, updatedAt: new Date(), finishedAt: ['FINISHED', 'FAILED', 'CANCELLED'].includes(status) ? new Date() : null }).where(eq(workflowSessions.id, session.id));
-      const storyKey = (session.args as Record<string, unknown>)?.storyId;
       if (typeof storyKey === 'string') {
-        const storyStatus = status === 'FINISHED' ? 'done' : status === 'BLOCKED' ? 'blocked' : status === 'FAILED' ? 'review' : status === 'WAITING_FOR_INPUT' ? 'in-progress' : undefined;
-        if (storyStatus) await tx.update(storyUnits).set({ status: storyStatus, metadata: { sessionId: session.id, artifactRefs: result.artifactRefs, repositoryRevision: result.repositoryRevisions.result }, updatedAt: new Date() }).where(and(eq(storyUnits.workstreamId, session.workstreamId), eq(storyUnits.storyKey, storyKey)));
+        const needsDoneAcceptance = Boolean((relatedStory?.metadata as any)?.outcome?.doneCheckpoint);
+        const storyStatus = storyStatusFromSession(status, needsDoneAcceptance);
+        const metadata = { ...((relatedStory?.metadata as Record<string, unknown>) ?? {}), sessionId: session.id, artifactRefs: result.artifactRefs, repositoryRevision: result.repositoryRevisions.result };
+        if (storyStatus) await tx.update(storyUnits).set({ status: storyStatus, metadata, updatedAt: new Date() }).where(and(eq(storyUnits.workstreamId, session.workstreamId), eq(storyUnits.storyKey, storyKey)));
       }
       await tx.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: session.id, action: status.toLowerCase(), actor: 'system', detail: { summary: result.summary, artifactRefs: result.artifactRefs }, idempotencyKey: `${session.id}:${existing.length}:${status}` }).onConflictDoNothing();
     });
