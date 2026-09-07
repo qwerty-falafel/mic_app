@@ -11,6 +11,15 @@ When a BMAD workflow creates or revises `stories.yaml`, apply this contract befo
 6. First present the proposed outcome slices and explain their capability coverage. Obtain agreement on the slicing before asking for each Story's `spec_checkpoint`, `done_checkpoint`, and optional `invoke_dev_with` settings.
 7. Preserve BMAD's exact Story schema. Do not add fields to compensate for a task-shaped description.
 
+Before proposing the slices, apply this release-value test:
+
+- Begin with one Story for the coherent product outcome described by the specification.
+- Split it only when each resulting Story is independently useful, releasable, and sensible to order separately without the other proposed Stories.
+- A capability, acceptance example, failure mode, quality, technical mechanism, or regression guarantee is not independently valuable merely because it can be implemented or tested separately.
+- Do not use `system`, `application`, `developer`, or a generic `user` as a substitute for the real beneficiary named or implied by the product context.
+- Do not claim that slices are vertical without explaining what usable outcome each slice independently releases.
+- Use literal ASCII capability identifiers such as `CAP-1`; do not substitute typographic hyphens.
+
 The checkpoint meanings are operational:
 
 - `spec_checkpoint: true` requires attended BMAD Build and human acceptance of the Story specification before implementation.
