@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 export type Route =
   | { name: 'home' }
   | { name: 'products' }
-  | { name: 'product'; productSlug: string; section?: 'overview' | 'backlog' }
+  | { name: 'product'; productSlug: string; section?: ProductSection; reference?: string }
   | { name: 'delivery'; productSlug: string; deliverySlug: string; view: 'current' | 'stage' | 'run' | 'artifact' | 'advanced'; reference?: string; tab?: string }
   | { name: 'settings' }
   | { name: 'not-found' };
 
 const decode = (value: string | undefined) => { try { return decodeURIComponent(value ?? '') } catch { return '' } };
+export type ProductSection = 'overview' | 'roadmap' | 'briefs' | 'backlog' | 'board' | 'sprints' | 'releases' | 'activity' | 'settings';
+const productSections = new Set<ProductSection>(['overview', 'roadmap', 'briefs', 'backlog', 'board', 'sprints', 'releases', 'activity', 'settings']);
 
 export function parseRoute(location: Pick<Location, 'pathname' | 'search'> = window.location): Route {
   const parts = location.pathname.split('/').filter(Boolean);
@@ -19,7 +21,7 @@ export function parseRoute(location: Pick<Location, 'pathname' | 'search'> = win
   if (parts[0] !== 'products' || !parts[1]) return { name: 'not-found' };
   const productSlug = decode(parts[1]);
   if (parts.length === 2) return { name: 'product', productSlug, section: 'overview' };
-  if (parts[2] === 'backlog') return { name: 'product', productSlug, section: 'backlog' };
+  if (productSections.has(parts[2] as ProductSection)) return { name: 'product', productSlug, section: parts[2] as ProductSection, reference: decode(parts[3]) || undefined };
   if (parts[2] !== 'delivery' || !parts[3]) return { name: 'not-found' };
   const deliverySlug = decode(parts[3]);
   if (parts.length === 4) return { name: 'delivery', productSlug, deliverySlug, view: 'current' };

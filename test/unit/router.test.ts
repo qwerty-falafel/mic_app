@@ -9,6 +9,10 @@ describe('route-backed MIC places', () => {
     expect(at('/products')).toEqual({ name: 'products' });
     expect(at('/products/tts')).toEqual({ name: 'product', productSlug: 'tts', section: 'overview' });
     expect(at('/products/tts/backlog')).toEqual({ name: 'product', productSlug: 'tts', section: 'backlog' });
+    expect(at('/products/tts/roadmap')).toEqual({ name: 'product', productSlug: 'tts', section: 'roadmap', reference: undefined });
+    expect(at('/products/tts/board/PBI-12')).toEqual({ name: 'product', productSlug: 'tts', section: 'board', reference: 'PBI-12' });
+    expect(at('/products/tts/sprints')).toEqual({ name: 'product', productSlug: 'tts', section: 'sprints', reference: undefined });
+    expect(at('/products/tts/settings')).toEqual({ name: 'product', productSlug: 'tts', section: 'settings', reference: undefined });
     expect(at('/products/tts/delivery/long-text')).toMatchObject({ name: 'delivery', view: 'current' });
     expect(at('/products/tts/delivery/long-text/stage/specification')).toMatchObject({ name: 'delivery', view: 'stage', reference: 'specification' });
     expect(at('/products/tts/delivery/long-text/runs/run-1', '?tab=logs')).toMatchObject({ name: 'delivery', view: 'run', reference: 'run-1', tab: 'logs' });
