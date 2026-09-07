@@ -13,4 +13,4 @@ export async function api<T = any>(path: string, init?: RequestInit): Promise<T>
   return body as T;
 }
 
-export const post = <T = any>(path: string, body: unknown = {}) => api<T>(path, { method: 'POST', body: JSON.stringify(body), headers: { 'idempotency-key': crypto.randomUUID() } });
+export const post = <T = any>(path: string, body: unknown = {}, idempotencyKey: string = crypto.randomUUID()) => api<T>(path, { method: 'POST', body: JSON.stringify(body), headers: { 'idempotency-key': idempotencyKey } });

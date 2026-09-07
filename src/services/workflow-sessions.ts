@@ -160,7 +160,10 @@ export class WorkflowSessionService {
 
   async respond(sessionId: string, content: string, actor = 'api', commandKey: string = randomUUID()) {
     const [session] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId));
-    if (!session || !['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED'].includes(session.status)) throw new Error('Workflow session is not waiting for input');
+    if (!session) throw new Error('Workflow session not found');
+    const [duplicate] = await this.db.select().from(conversationTurns).where(and(eq(conversationTurns.sessionId, sessionId), eq(conversationTurns.commandKey, commandKey))).limit(1);
+    if (duplicate) return { sessionId, status: session.status, duplicate: true };
+    if (!['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED'].includes(session.status)) throw new Error('Workflow session is not waiting for input');
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, session.workstreamId));
     const [repository] = stream?.repositoryId ? await this.db.select().from(repositories).where(eq(repositories.id, stream.repositoryId)) : [];
     if (!stream?.workspacePath || !repository) throw new Error('Workflow workspace is unavailable');
