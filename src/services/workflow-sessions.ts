@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cp, access, mkdir, symlink, writeFile } from 'node:fs/promises';
+import { cp, access, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EventEmitter } from 'node:events';
@@ -42,6 +42,12 @@ export function preserveControlState(persisted: string | undefined, observed: st
 
 export function storyStatusFromSession(status: string, doneCheckpoint: boolean) {
   return status === 'FINISHED' ? (doneCheckpoint ? 'review' : 'done') : status === 'BLOCKED' ? 'blocked' : status === 'FAILED' ? 'review' : status === 'WAITING_FOR_INPUT' ? 'in-progress' : undefined;
+}
+
+export function nodeVerificationScripts(packageText: string) {
+  const value = JSON.parse(packageText);
+  const scripts = value?.scripts && typeof value.scripts === 'object' ? value.scripts : {};
+  return ['test', 'build'].filter(name => typeof scripts[name] === 'string' && scripts[name].trim()).map(name => ['run', name]);
 }
 
 export class WorkflowSessionService {
@@ -116,11 +122,38 @@ export class WorkflowSessionService {
     const runId = `${session.id}-${turns.length}`;
     try {
       const result = await this.runner.execute({ runId, skill: session.skill, action: session.action ?? undefined, args: session.args as Record<string, unknown>, prompt: turns.at(-1)!.content, repository, workspace, baseline, model: this.model, providerSessionId: session.providerSessionId ?? undefined });
+      if (result.status === 'done' && ['bmad-build', 'bmad-build-auto'].includes(session.skill)) {
+        const verification = await this.verifyBuild(workspace);
+        result.rawAdapterState = { ...result.rawAdapterState, verification };
+        result.evidenceRefs = [...result.evidenceRefs, ...verification.checks.filter(check => check.passed).map(check => `command:${check.command}`)];
+        if (!verification.passed) {
+          result.status = 'failed';
+          result.summary = `${session.skill} failed repository verification`;
+          result.rawAdapterState.stderr = [String(result.rawAdapterState.stderr ?? ''), verification.checks.filter(check => !check.passed).map(check => `${check.command}: ${check.output}`).join('\n')].filter(Boolean).join('\n');
+        }
+      }
       await this.completeTurn(session, result);
     } catch (error) {
       await this.db.update(workflowSessions).set({ status: 'FAILED', finishedAt: new Date(), updatedAt: new Date(), rawState: { workspace, error: String(error), lastRunId: runId } }).where(eq(workflowSessions.id, session.id));
       this.publish(session.id, { type: 'status', status: 'FAILED', error: String(error) });
     }
+  }
+
+  private async verifyBuild(workspace: string) {
+    const checks: Array<{ command: string; passed: boolean; output: string }> = [];
+    let scripts: string[][];
+    try { scripts = nodeVerificationScripts(await readFile(resolve(workspace, 'package.json'), 'utf8')); }
+    catch (error) { return { passed: false, checks: [{ command: 'parse package.json', passed: false, output: String(error) }] }; }
+    for (const args of scripts) {
+      const command = `npm ${args.join(' ')}`;
+      try {
+        const value = await exec('npm', args, { cwd: workspace, timeout: 300_000 });
+        checks.push({ command, passed: true, output: `${value.stdout}${value.stderr}`.trim().slice(-8000) });
+      } catch (error: any) {
+        checks.push({ command, passed: false, output: `${error?.stdout ?? ''}${error?.stderr ?? ''}${error?.message ?? error}`.trim().slice(-8000) });
+      }
+    }
+    return { passed: checks.every(check => check.passed), checks };
   }
 
   private async completeTurn(session: typeof workflowSessions.$inferSelect, result: WorkflowRunResult) {

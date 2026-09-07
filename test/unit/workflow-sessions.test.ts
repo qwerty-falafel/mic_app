@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { awaitsInput, conversationFromJsonl, preserveControlState, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
+import { awaitsInput, conversationFromJsonl, nodeVerificationScripts, preserveControlState, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
 
 describe('durable workflow conversation contracts', () => {
+  it('selects available Node verification commands and rejects malformed package data', () => {
+    expect(nodeVerificationScripts('{"scripts":{"test":"vitest run","build":"vite build","dev":"vite"}}')).toEqual([['run', 'test'], ['run', 'build']]);
+    expect(nodeVerificationScripts('{"scripts":{"dev":"vite"}}')).toEqual([]);
+    expect(() => nodeVerificationScripts('{broken')).toThrow();
+  });
+
   it('extracts the provider session and assistant output from OpenCode JSONL', () => {
     const source = [
       JSON.stringify({ type: 'step_start', sessionID: 'ses_123', part: {} }),
