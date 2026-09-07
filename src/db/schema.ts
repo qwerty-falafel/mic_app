@@ -28,6 +28,18 @@ export const epicFeatures = pgTable('epic_features', {
   epicId: text('epic_id').notNull().references(() => productEpics.id, { onDelete: 'cascade' }), featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }), createdAt: createdAt(),
 }, table => [uniqueIndex('epic_feature_idx').on(table.epicId, table.featureId), index('epic_feature_feature_idx').on(table.featureId)]);
 
+export const productBriefs = pgTable('product_briefs', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), title: text('title').notNull(), content: text('content').notNull(), status: text('status').notNull().default('draft'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('product_briefs_project_idx').on(table.projectId, table.createdAt)]);
+
+export const productProposals = pgTable('product_proposals', {
+  id: text('id').primaryKey(), briefId: text('brief_id').notNull().references(() => productBriefs.id, { onDelete: 'cascade' }), revision: integer('revision').notNull(), status: text('status').notNull().default('proposed'), model: text('model').notNull(), rationale: text('rationale').notNull(), proposal: jsonb('proposal').notNull(), feedback: text('feedback'), createdAt: createdAt(),
+}, table => [uniqueIndex('product_proposal_brief_revision_idx').on(table.briefId, table.revision), index('product_proposal_status_idx').on(table.status)]);
+
+export const proposalDecisions = pgTable('proposal_decisions', {
+  id: text('id').primaryKey(), proposalId: text('proposal_id').notNull().references(() => productProposals.id, { onDelete: 'cascade' }), kind: text('kind').notNull(), feedback: text('feedback'), actor: text('actor').notNull(), createdAt: createdAt(),
+}, table => [uniqueIndex('proposal_decision_once_idx').on(table.proposalId)]);
+
 export const repositories = pgTable('repositories', {
   id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('primary'), path: text('path').notNull(), baseBranch: text('base_branch').notNull().default('main'), createdAt: createdAt(),

@@ -24,6 +24,7 @@ import { repositoryHealth } from './services/repository-health.js';
 import { ProductService } from './services/products.js';
 import { DeliveryProjectionService } from './services/delivery-projection.js';
 import { ScrumService } from './services/scrum.js';
+import { GptOssProposalAnalyzer, ProductProposalService, type ProductProposalAnalyzer } from './services/product-proposals.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().trim().min(1), purpose: z.string().trim().optional(), status: z.enum(['active', 'archived']).optional(), definitionOfDone: z.string().trim().min(1).optional() });
@@ -36,7 +37,7 @@ export function isBrowserDocumentRequest(request: { method: string; headers: Rec
   return request.method === 'GET' && String(request.headers.accept ?? '').includes('text/html');
 }
 
-export function createApp(db: Database, executor?: LifecycleExecutor) {
+export function createApp(db: Database, executor?: LifecycleExecutor, proposalAnalyzer?: ProductProposalAnalyzer) {
   const app = Fastify({ logger: false });
   void app.register(cors, { origin: true });
   void app.register(swagger, { mode: 'static', specification: { path: resolve('docs/openapi.json'), baseDir: resolve('docs') } });
@@ -53,6 +54,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   const products = new ProductService(db);
   const delivery = new DeliveryProjectionService(db);
   const scrum = new ScrumService(db);
+  const proposals = new ProductProposalService(db, proposalAnalyzer ?? new GptOssProposalAnalyzer());
   void sessions.recoverActive();
   app.addHook('onClose', async () => { await sessions.interruptActive(); });
   const key = (request: { headers: Record<string, unknown> }) => typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : randomUUID();
@@ -63,6 +65,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
     if (error instanceof Error && error.message.startsWith('Invalid transition')) return reply.code(409).send({ error: 'invalid_transition', message: error.message });
     if (error instanceof Error && (error.message.startsWith('Delivery state changed') || error.message.startsWith('Action is not available') || error.message.startsWith('Action prerequisites'))) return reply.code(409).send({ error: 'stale_or_ineligible_action', message: error.message });
     if (error instanceof Error && (/Sprint|Product Backlog Item|Definition of Done|same Product/.test(error.message))) return reply.code(409).send({ error: 'scrum_constraint', message: error.message });
+    if (error instanceof Error && error.message.includes('proposal revision has already been decided')) return reply.code(409).send({ error: 'proposal_already_decided', message: error.message });
     return reply.code(500).send({ error: 'internal_error', message: error instanceof Error ? error.message : 'Unexpected MIC error' });
   });
   app.get('/health', async () => ({ status: 'ok' }));
@@ -112,6 +115,10 @@ export function createApp(db: Database, executor?: LifecycleExecutor) {
   app.post('/features/:id/deliveries', async (request, reply) => { const { id: featureId } = z.object({ id }).parse(request.params); const { workstreamId } = z.object({ workstreamId: id }).parse(request.body); return reply.code(201).send(await products.linkFeature(featureId, workstreamId)); });
   app.post('/products/:id/definition-of-done', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const { definitionOfDone } = z.object({ definitionOfDone: z.string().trim().min(1) }).parse(request.body); return products.updateDefinitionOfDone(projectId, definitionOfDone); });
   app.patch('/products/:id', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const body = projectInput.partial().parse(request.body); return products.updateProduct(projectId, body); });
+  app.get('/products/:id/briefs', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const briefs = await proposals.listBriefs(projectId); return Promise.all(briefs.map(async brief => ({ brief, proposals: await proposals.listProposals(brief.id) }))); });
+  app.post('/products/:id/briefs', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ title: z.string().trim().min(1), content: z.string().trim().min(1) }).parse(request.body); return reply.code(201).send(await proposals.createBrief(projectId, body.title, body.content)); });
+  app.post('/briefs/:id/analyse', async request => { const { id: briefId } = z.object({ id }).parse(request.params); const { feedback } = z.object({ feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.analyse(briefId, feedback); });
+  app.post('/product-proposals/:id/decisions', async request => { const { id: proposalId } = z.object({ id }).parse(request.params); const body = z.object({ kind: z.enum(['accepted', 'revision-requested', 'rejected']), actor: z.string().trim().min(1), feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.decide(proposalId, body.kind, body.actor, body.feedback); });
   app.get('/product-backlog', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listBacklog(projectId); });
   app.post('/product-backlog', async (request, reply) => { const body = z.object({ projectId: id, featureId: id.optional(), workstreamId: id.optional(), storyUnitId: id.optional(), kind: z.enum(['change', 'epic', 'story', 'defect', 'research', 'correction']), title: z.string().trim().min(1), description: z.string().optional(), order: z.number().int().optional(), acceptanceCriteria: z.array(z.string().trim().min(1)).optional() }).parse(request.body); return reply.code(201).send(await scrum.createBacklogItem(body)); });
   app.post('/product-backlog/:id/status', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const { status } = z.object({ status: z.enum(['proposed', 'ready', 'in-progress', 'done', 'removed']) }).parse(request.body); return scrum.updateBacklogStatus(itemId, status); });

@@ -34,7 +34,7 @@ describe('product model and delivery lifecycle projection', () => {
     await postgres.start();
     connection = createDatabase(`postgres://postgres:mic-test@127.0.0.1:${port}/postgres`);
     await migrateDatabase(connection.db);
-    app = createApp(connection.db);
+    app = createApp(connection.db, undefined, { analyse: async ({ feedback }) => ({ rationale: feedback ? `Revised after: ${feedback}` : 'A Feature and Story provide the smallest useful outcome.', features: [{ name: 'Evidence search', description: 'Find supporting evidence.' }], epics: [{ name: 'Research workflow', outcome: 'A traceable research result.', featureNames: ['Evidence search'] }], items: [{ kind: 'story', title: feedback ? 'Review evidence clearly' : 'Search evidence', value: 'A researcher can find evidence with its provenance.', acceptanceCriteria: ['A result links to its source'], featureName: 'Evidence search', epicName: 'Research workflow' }], dependencies: [], uncertainties: [] }) });
   }, 60_000);
 
   afterAll(async () => {
@@ -117,5 +117,21 @@ describe('product model and delivery lifecycle projection', () => {
       attentionCount: 0,
       nextAction: null,
     }));
+  });
+
+  it('keeps Brief proposals revision-bound and applies only an accepted revision', async () => {
+    const product = (await app.inject({ method: 'POST', url: '/products', headers: { 'idempotency-key': 'proposal-product' }, payload: { name: 'Proposal Product', purpose: 'Test proposals.' } })).json<any>();
+    const brief = (await app.inject({ method: 'POST', url: `/products/${product.id}/briefs`, payload: { title: 'Evidence workflow', content: 'Help researchers find cited evidence.' } })).json<any>();
+    const first = (await app.inject({ method: 'POST', url: `/briefs/${brief.id}/analyse`, payload: {} })).json<any>();
+    expect(first).toMatchObject({ revision: 1, status: 'proposed', model: expect.stringContaining('gpt-oss-120b') });
+    await app.inject({ method: 'POST', url: `/product-proposals/${first.id}/decisions`, payload: { kind: 'revision-requested', actor: 'Michael', feedback: 'Make review explicit' } });
+    expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json()).toEqual([]);
+    const second = (await app.inject({ method: 'POST', url: `/briefs/${brief.id}/analyse`, payload: { feedback: 'Make review explicit' } })).json<any>();
+    expect(second).toMatchObject({ revision: 2, rationale: 'Revised after: Make review explicit' });
+    expect((await app.inject({ method: 'POST', url: `/product-proposals/${second.id}/decisions`, payload: { kind: 'accepted', actor: 'Michael' } })).statusCode).toBe(200);
+    const backlog = (await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>();
+    expect(backlog).toHaveLength(1);
+    expect(backlog[0].item).toMatchObject({ kind: 'story', title: 'Review evidence clearly', status: 'proposed' });
+    expect((await app.inject({ method: 'POST', url: `/product-proposals/${second.id}/decisions`, payload: { kind: 'accepted', actor: 'Michael' } })).statusCode).toBe(409);
   });
 });
