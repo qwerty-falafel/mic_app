@@ -60,11 +60,19 @@ export class WorkflowSessionService {
     try { await task(); } finally { this.active = false; void this.pump(); }
   }
 
-  async start(input: { workstreamId: string; skill: string; action?: string; args?: Record<string, unknown>; prompt: string }, actor = 'api') {
+  async start(input: { workstreamId: string; storyUnitId?: string; skill: string; action?: string; args?: Record<string, unknown>; prompt: string }, actor = 'api') {
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, input.workstreamId));
     if (!stream?.repositoryId) throw new Error('Workstream has no repository');
     const [repository] = await this.db.select().from(repositories).where(eq(repositories.id, stream.repositoryId));
     if (!repository) throw new Error('Repository not found');
+    const eligible = await this.streams.operations(stream.id);
+    const boundedStoryBuild = Boolean(input.storyUnitId && ['bmad-build', 'bmad-build-auto'].includes(input.skill));
+    if (!boundedStoryBuild && !eligible.some(row => row.skill === input.skill && (row.action ?? undefined) === input.action)) throw new Error(`BMAD operation is not eligible for the selected ${stream.path} path`);
+    if (['bmad-build', 'bmad-build-auto'].includes(input.skill) && stream.path !== 'direct' && !input.storyUnitId) throw new Error('Epic and project work can enter Build only through one bounded Story');
+    if (input.storyUnitId) {
+      const [story] = await this.db.select().from(storyUnits).where(and(eq(storyUnits.id, input.storyUnitId), eq(storyUnits.workstreamId, stream.id)));
+      if (!story) throw new Error('Story does not belong to this Delivery Case');
+    }
     const definition = await this.streams.requireDefinition(repository.id, input.skill, input.action);
     const sessionId = `session_${randomUUID()}`;
     let workspace = stream.workspacePath;
@@ -79,7 +87,8 @@ export class WorkflowSessionService {
       }
     }
     const [row] = await this.db.transaction(async tx => {
-      const [created] = await tx.insert(workflowSessions).values({ id: sessionId, workstreamId: stream.id, definitionId: definition.id, skill: input.skill, action: input.action, args: input.args ?? {}, prompt: input.prompt, status: 'QUEUED', rawState: { workspace } }).returning();
+      const [created] = await tx.insert(workflowSessions).values({ id: sessionId, workstreamId: stream.id, definitionId: definition.id, storyUnitId: input.storyUnitId, skill: input.skill, action: input.action, args: input.args ?? {}, prompt: input.prompt, status: 'QUEUED', rawState: { workspace } }).returning();
+      if (input.storyUnitId) await tx.update(storyUnits).set({ status: 'queued', updatedAt: new Date() }).where(eq(storyUnits.id, input.storyUnitId));
       await tx.insert(conversationTurns).values({ id: `turn_${randomUUID()}`, sessionId, sequence: 1, role: 'user', content: input.prompt, commandKey: `${sessionId}:initial` });
       await tx.insert(auditEvents).values({ aggregateType: 'workflow_session', aggregateId: sessionId, action: 'started', actor, detail: { skill: input.skill, action: input.action }, idempotencyKey: `${sessionId}:started` });
       await tx.insert(outboxEvents).values({ id: `evt_${randomUUID()}`, topic: 'workflow_session.started', payload: { id: sessionId, workstreamId: stream.id, skill: input.skill }, idempotencyKey: `${sessionId}:started` });

@@ -3,10 +3,12 @@ import EmbeddedPostgres from 'embedded-postgres';
 import { createServer } from 'node:net';
 import { existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { eq } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
-import { artifactRevisions, reviewDecisions } from '../../src/db/schema.js';
+import { artifactRevisions, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
+import { StoryDeliveryService } from '../../src/services/story-delivery.js';
 
 async function freePort() {
   return new Promise<number>((resolvePort, reject) => {
@@ -34,7 +36,7 @@ describe('product model and delivery lifecycle projection', () => {
     await postgres.start();
     connection = createDatabase(`postgres://postgres:mic-test@127.0.0.1:${port}/postgres`);
     await migrateDatabase(connection.db);
-    app = createApp(connection.db, undefined, { analyse: async ({ feedback }) => ({ rationale: feedback ? `Revised after: ${feedback}` : 'A Feature and Story provide the smallest useful outcome.', features: [{ name: 'Evidence search', description: 'Find supporting evidence.' }], epics: [{ name: 'Research workflow', outcome: 'A traceable research result.', featureNames: ['Evidence search'] }], items: [{ kind: 'story', title: feedback ? 'Review evidence clearly' : 'Search evidence', value: 'A researcher can find evidence with its provenance.', acceptanceCriteria: ['A result links to its source'], featureName: 'Evidence search', epicName: 'Research workflow' }], dependencies: [], uncertainties: [] }) });
+    app = createApp(connection.db, undefined, { analyse: async ({ feedback }) => ({ rationale: feedback ? `Revised after: ${feedback}` : 'A Feature and Story provide the smallest useful outcome.', features: [{ name: 'Evidence search', description: 'Find supporting evidence.' }], epics: [{ name: 'Research workflow', outcome: 'A traceable research result.', featureNames: ['Evidence search'] }], items: [{ kind: 'story', title: feedback ? 'Review evidence clearly' : 'Search evidence', value: 'A researcher can find evidence with its provenance.', acceptanceCriteria: ['A result links to its source'], featureName: 'Evidence search', epicName: 'Research workflow' }], dependencies: [], uncertainties: [], deliveryRecommendation: { path: 'spec-epic', rationale: 'The coherent outcome needs an accepted specification and bounded Stories.', evidence: ['The proposal contains an Epic.'], nextArtifact: 'SPEC.md' } }) });
   }, 60_000);
 
   afterAll(async () => {
@@ -135,6 +137,7 @@ describe('product model and delivery lifecycle projection', () => {
     const brief = (await app.inject({ method: 'POST', url: `/products/${product.id}/briefs`, payload: { title: 'Evidence workflow', content: 'Help researchers find cited evidence.' } })).json<any>();
     const first = (await app.inject({ method: 'POST', url: `/briefs/${brief.id}/analyse`, payload: {} })).json<any>();
     expect(first).toMatchObject({ revision: 1, status: 'proposed', model: expect.stringContaining('gpt-oss-120b') });
+    expect(first.proposal.deliveryRecommendation).toMatchObject({ path: 'spec-epic', nextArtifact: 'SPEC.md' });
     await app.inject({ method: 'POST', url: `/product-proposals/${first.id}/decisions`, payload: { kind: 'revision-requested', actor: 'Michael', feedback: 'Make review explicit' } });
     expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json()).toEqual([]);
     const second = (await app.inject({ method: 'POST', url: `/briefs/${brief.id}/analyse`, payload: { feedback: 'Make review explicit' } })).json<any>();
@@ -142,7 +145,70 @@ describe('product model and delivery lifecycle projection', () => {
     expect((await app.inject({ method: 'POST', url: `/product-proposals/${second.id}/decisions`, payload: { kind: 'accepted', actor: 'Michael' } })).statusCode).toBe(200);
     const backlog = (await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>();
     expect(backlog).toHaveLength(1);
-    expect(backlog[0].item).toMatchObject({ kind: 'story', title: 'Review evidence clearly', status: 'proposed' });
+    expect(backlog[0].item).toMatchObject({ kind: 'story', title: 'Review evidence clearly', status: 'proposed', sourceProposalId: second.id, deliveryPath: 'spec-epic' });
+    const recommendation = (await app.inject({ method: 'GET', url: `/product-backlog/${backlog[0].item.id}/delivery-recommendation` })).json<any>();
+    expect(recommendation).toMatchObject({ recommended: 'spec-epic', owner: 'BMAD', governance: expect.stringContaining('MIC human approval') });
+    expect(recommendation.alternatives.every((route: any) => route.available === false)).toBe(true);
+    const trace = (await app.inject({ method: 'GET', url: `/product-backlog/${backlog[0].item.id}/trace` })).json<any>();
+    expect(trace).toMatchObject({ item: { id: backlog[0].item.id }, brief: { id: brief.id }, proposal: { id: second.id }, epic: { name: 'Research workflow' }, authorities: { backlogOrder: 'MIC/Scrum', planningAndBuild: 'BMAD', humanApproval: 'MIC' } });
+    expect(trace.features).toContainEqual(expect.objectContaining({ name: 'Evidence search' }));
     expect((await app.inject({ method: 'POST', url: `/product-proposals/${second.id}/decisions`, payload: { kind: 'accepted', actor: 'Michael' } })).statusCode).toBe(409);
+  });
+
+  it('synchronizes only an accepted stories.yaml revision into the one Product Backlog', async () => {
+    const product = (await app.inject({ method: 'POST', url: '/products', headers: { 'idempotency-key': 'story-sync-product' }, payload: { name: 'Story Sync Product' } })).json<any>();
+    const epic = (await app.inject({ method: 'POST', url: `/products/${product.id}/epics`, payload: { name: 'Accepted breakdown', outcome: 'Deliver bounded stories.' } })).json<any>();
+    const stream = (await app.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'story-sync-stream' }, payload: { projectId: product.id, title: 'Accepted breakdown', intent: 'Plan and deliver bounded stories.', path: 'spec-epic' } })).json<any>();
+    await connection.db.update(productEpics).set({ workstreamId: stream.id }).where(eq(productEpics.id, epic.id));
+    const [inventory] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v1', workstreamId: stream.id, path: '_bmad-output/specs/sync/stories.yaml', type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v1', content: 'stories:\n  - id: "1.1"\n    title: First bounded Story\n    description: Deliver the first useful outcome.\n    acceptanceCriteria:\n      - It is usable.\n', metadata: { valid: true } }).returning();
+    const refused = await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ message: expect.stringContaining('human approval') });
+    await connection.db.insert(reviewDecisions).values({ id: 'review_stories_v1', artifactRevisionId: inventory!.id, kind: 'accepted', actor: 'Michael' });
+    const sprintCountBefore = (await connection.db.select().from(scrumSprints)).length;
+    const first = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
+    expect(first.artifact).toMatchObject({ id: inventory!.id, contentHash: 'stories-v1', acceptedBy: 'Michael' });
+    expect(first.stories[0]).toMatchObject({ story: { storyKey: '1.1', parentArtifactId: inventory!.id }, backlogItem: { epicId: epic.id, sourceArtifactId: inventory!.id, sourceArtifactHash: 'stories-v1', sourceStoryKey: '1.1' } });
+    const second = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
+    expect(second.stories[0].backlogItem.id).toBe(first.stories[0].backlogItem.id);
+    expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toHaveLength(1);
+    expect((await connection.db.select().from(scrumSprints)).length).toBe(sprintCountBefore);
+
+    const [revised] = await connection.db.insert(artifactRevisions).values({ id: 'artifact_stories_v2', workstreamId: stream.id, path: inventory!.path, type: 'story-inventory', status: 'ready-for-dev', contentHash: 'stories-v2', content: 'stories:\n  - id: "1.1"\n    title: Revised bounded Story\n    description: Deliver the corrected useful outcome.\n', metadata: { valid: true }, createdAt: new Date(Date.now() + 1000) }).returning();
+    await connection.db.insert(reviewDecisions).values({ id: 'review_stories_v2', artifactRevisionId: revised!.id, kind: 'accepted', actor: 'Michael' });
+    const revisedSync = (await app.inject({ method: 'POST', url: `/workstreams/${stream.id}/stories/sync`, payload: {} })).json<any>();
+    expect(revisedSync.stories[0]).toMatchObject({ changedRevision: true, backlogItem: { id: first.stories[0].backlogItem.id, title: 'Revised bounded Story', sourceArtifactId: revised!.id, sourceArtifactHash: 'stories-v2' } });
+    expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toHaveLength(1);
+    const trace = (await app.inject({ method: 'GET', url: `/product-backlog/${first.stories[0].backlogItem.id}/trace` })).json<any>();
+    expect(trace).toMatchObject({ bmad: { story: { storyKey: '1.1' }, artifact: { id: revised!.id, contentHash: 'stories-v2' } }, scrum: { sprints: [], increments: [] } });
+
+    await connection.db.insert(workflowSessions).values({ id: 'active_story_build', workstreamId: stream.id, storyUnitId: first.stories[0].story.id, skill: 'bmad-build', prompt: 'bounded', status: 'RUNNING' });
+    await expect(new StoryDeliveryService(connection.db).dispatch(first.stories[0].story.id, 'bmad-build')).rejects.toThrow('already has an active BMAD Build session');
+  });
+
+  it('routes through installed BMAD capabilities without dispatching an Epic as one Build', async () => {
+    const product = (await app.inject({ method: 'POST', url: '/products', headers: { 'idempotency-key': 'route-product' }, payload: { name: 'Routed Product' } })).json<any>();
+    const repositoryResponse = await app.inject({ method: 'POST', url: `/projects/${product.id}/repositories`, headers: { 'idempotency-key': 'route-repository' }, payload: { path: resolve('.'), baseBranch: 'main' } });
+    expect(repositoryResponse.statusCode).toBe(201);
+    const repository = repositoryResponse.json<any>();
+    const epic = (await app.inject({ method: 'POST', url: `/products/${product.id}/epics`, payload: { name: 'Routed Epic', outcome: 'Plan a coherent multi-Story result.' } })).json<any>();
+    const recommendation = (await app.inject({ method: 'GET', url: `/product-epics/${epic.id}/delivery-recommendation?repositoryId=${repository.id}` })).json<any>();
+    expect(recommendation).toMatchObject({ recommended: 'spec-epic', owner: 'BMAD', consequences: expect.stringContaining('SPEC.md') });
+    expect(recommendation.alternatives.find((route: any) => route.path === 'spec-epic')).toMatchObject({ available: true, missing: [] });
+    const wholesale = await app.inject({ method: 'POST', url: `/product-epics/${epic.id}/dispatch`, payload: { repositoryId: repository.id, path: 'direct', actor: 'Michael' } });
+    expect(wholesale.statusCode).toBe(400);
+    const dispatched = await app.inject({ method: 'POST', url: `/product-epics/${epic.id}/dispatch`, payload: { repositoryId: repository.id, actor: 'Michael' } });
+    expect(dispatched.statusCode).toBe(201);
+    expect(dispatched.json()).toMatchObject({ path: 'spec-epic', repositoryId: repository.id, classification: 'epic' });
+    const operations = (await app.inject({ method: 'GET', url: `/workstreams/${dispatched.json<any>().id}/operations` })).json<any[]>();
+    expect(operations.some(operation => ['bmad-build', 'bmad-build-auto'].includes(operation.skill))).toBe(false);
+    const wholeEpicBuild = await app.inject({ method: 'POST', url: '/workflow-sessions', payload: { workstreamId: dispatched.json<any>().id, skill: 'bmad-build', prompt: 'Build the Epic.' } });
+    expect(wholeEpicBuild.statusCode).toBe(409);
+    expect(wholeEpicBuild.json()).toMatchObject({ message: expect.stringContaining('not eligible') });
+
+    const item = (await app.inject({ method: 'POST', url: '/product-backlog', payload: { projectId: product.id, kind: 'defect', title: 'Bounded defect', value: 'Restore one intended behaviour.' } })).json<any>();
+    const direct = await app.inject({ method: 'POST', url: `/product-backlog/${item.id}/dispatch`, payload: { repositoryId: repository.id, actor: 'Michael' } });
+    expect(direct.statusCode).toBe(201);
+    expect(direct.json()).toMatchObject({ path: 'direct', classification: 'change' });
   });
 });

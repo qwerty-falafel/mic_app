@@ -54,7 +54,7 @@ export class WorkstreamService {
     if (!stream?.repositoryId) return [];
     const all = await this.db.select().from(workflowDefinitions).where(eq(workflowDefinitions.repositoryId, stream.repositoryId));
     const allowed = stream.path === 'direct' ? new Set(['bmad-help', 'bmad-build'])
-      : stream.path === 'spec-epic' ? new Set(['bmad-help', 'bmad-project-context', 'bmad-spec', 'bmad-build', 'bmad-build-auto', 'bmad-code-review', 'bmad-walkthrough', 'bmad-retrospective', 'bmad-correct-course'])
+      : stream.path === 'spec-epic' ? new Set(['bmad-help', 'bmad-project-context', 'bmad-spec', 'bmad-code-review', 'bmad-walkthrough', 'bmad-retrospective', 'bmad-correct-course'])
       : stream.path === 'project' ? new Set(['bmad-help', 'bmad-product-brief', 'bmad-prd', 'bmad-ux', 'bmad-architecture', 'bmad-create-epics-and-stories', 'bmad-sprint-planning', 'bmad-project-context', 'bmad-correct-course'])
       : stream.path === 'specialist' ? new Set(['bmad-help', 'bmad-deep-recon', 'bmad-review', 'bmad-code-review', 'bmad-correct-course']) : new Set(['bmad-help']);
     return all.filter(row => !allowed || allowed.has(row.skill));

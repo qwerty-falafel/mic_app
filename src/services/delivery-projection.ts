@@ -82,7 +82,8 @@ export class DeliveryProjectionService {
       if (!spec) { currentId = 'specification'; reason = 'A valid SPEC.md has not been created yet.'; }
       else if (!accepted.has(spec.id)) { currentId = 'specification'; state = 'awaiting-decision'; reason = 'The latest valid specification needs acceptance or revision feedback.'; attention = { type: 'artifact', id: spec.id, label: spec.path }; }
       else if (!storyInventory) { currentId = 'story-plan'; reason = 'The specification is accepted and ready to be refined into an ordered Story plan.'; }
-      else if (!stories.length) { currentId = 'story-plan'; reason = 'A valid stories.yaml exists and is ready to be indexed.'; attention = { type: 'artifact', id: storyInventory.id, label: storyInventory.path }; }
+      else if (!accepted.has(storyInventory.id)) { currentId = 'story-plan'; state = 'awaiting-decision'; reason = 'The latest BMAD Story Breakdown needs MIC human approval before it can update the Product Backlog.'; attention = { type: 'artifact', id: storyInventory.id, label: storyInventory.path }; }
+      else if (!stories.length) { currentId = 'story-plan'; reason = 'The accepted stories.yaml revision is ready to synchronize into the one Product Backlog.'; }
       else if (unfinished.length) { currentId = 'delivery'; reason = `${unfinished.length} of ${stories.length} Stories still need delivery.`; }
       else { currentId = 'epic-review'; reason = 'All Stories are complete; inspect the Epic outcome before integration.'; }
     }
@@ -91,20 +92,20 @@ export class DeliveryProjectionService {
     if (attention?.type === 'session') {
       if (active?.status === 'PAUSED' || active?.status === 'INTERRUPTED') baseActions.push(action('resume-session', 'Resume conversation', 'Continue from the preserved provider checkpoint.', currentId, undefined));
       else baseActions.push(action('open-session', state === 'active' ? 'View conversation' : 'Answer BMAD', state === 'active' ? 'Follow the current run without sending input.' : 'Read the exact question and respond in the same session.', currentId));
-    } else if (attention?.type === 'artifact') baseActions.push(action('review-artifact', invalid ? 'Correct artifact' : 'Review specification', invalid ? 'Inspect validation problems and request a corrected revision.' : 'Accept this exact revision or request specific changes.', invalid ? currentId : 'story-plan'));
+    } else if (attention?.type === 'artifact') baseActions.push(action('review-artifact', invalid ? 'Correct artifact' : storyInventory && attention.id === storyInventory.id ? 'Review Story Breakdown' : 'Review specification', invalid ? 'Inspect validation problems and request a corrected revision.' : 'Review BMAD technical output, then accept this exact revision or request specific changes through MIC.', invalid ? currentId : 'story-plan'));
     else if (stream.path === 'undecided') baseActions.push(action('choose-path', 'Choose delivery approach', 'Review the Brief and choose the BMAD path that fits its size and uncertainty.', 'classification', { skill: 'bmad-help' }));
     else if (stream.path === 'spec-epic' && !spec) baseActions.push(action('create-specification', 'Create specification', 'Turn the Brief into a concise implementation contract for this Epic.', 'specification', { skill: 'bmad-spec' }));
     else if (stream.path === 'spec-epic' && spec && accepted.has(spec.id) && !storyInventory) baseActions.push(action('create-story-plan', 'Create Story plan', 'Refine the accepted specification into ordered, bounded Stories.', 'story-plan', { skill: 'bmad-spec', action: 'create-stories' }));
-    else if (stream.path === 'spec-epic' && storyInventory && !stories.length) baseActions.push(action('index-stories', 'Open Story plan', 'Index and display the validated Story inventory.', 'delivery'));
+    else if (stream.path === 'spec-epic' && storyInventory && accepted.has(storyInventory.id) && !stories.length) baseActions.push(action('index-stories', 'Synchronize accepted Stories', 'Project this exact accepted BMAD revision into the one Product Backlog.', 'delivery'));
     else if (stream.path === 'spec-epic' && stories.length && unfinished.length) baseActions.push(action('deliver-story', 'Deliver next Story', 'Open the first eligible Story and choose attended Build or Build Auto.', 'delivery'));
     else if (stream.path === 'spec-epic' && stories.length) baseActions.push(action('review-epic', 'Review Epic outcome', 'Inspect evidence and run the BMAD Epic Retrospective.', 'epic-review', { skill: 'bmad-retrospective' }));
     else if (stream.path === 'direct') baseActions.push(action('build-change', 'Build change', 'Start one bounded attended Build session.', 'review', { skill: 'bmad-build' }));
     else if (stream.path === 'project') baseActions.push(action('continue-project-planning', 'Continue product planning', 'Run the next eligible BMAD planning workflow.', currentId));
     else baseActions.push(action('start-specialist-work', 'Start specialist work', 'Choose the focused research, review, or correction operation.', 'review'));
 
-    const readStoriesEligible = Boolean(storyInventory);
+    const readStoriesEligible = Boolean(storyInventory && accepted.has(storyInventory.id));
     const alternatives: DeliveryAction[] = [
-      action('index-stories', 'Open Story plan', 'Read the current stories.yaml inventory.', 'delivery', undefined, readStoriesEligible, readStoriesEligible ? undefined : 'A valid stories.yaml revision does not exist yet.'),
+      action('index-stories', 'Synchronize accepted Stories', 'Project the accepted stories.yaml revision into the one Product Backlog.', 'delivery', undefined, readStoriesEligible, readStoriesEligible ? undefined : 'An accepted valid stories.yaml revision does not exist yet.'),
       action('advanced-actions', 'Advanced actions', 'Inspect every eligible installed BMAD operation and its prerequisites.', currentId),
     ];
     const template = templates[stream.path] ?? templates.undecided!;

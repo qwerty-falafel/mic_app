@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parse as parseYaml } from 'yaml';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { artifactRevisions, auditEvents, integrationDecisions, repositories, reviewDecisions, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
+import { artifactRevisions, auditEvents, integrationDecisions, productBacklogItems, productEpics, projects, repositories, reviewDecisions, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
 
 const exec = promisify(execFile);
 
@@ -14,15 +14,37 @@ export class StoryDeliveryService {
   async sync(workstreamId: string) {
     const [inventory] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.type, 'story-inventory'))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
     if (!inventory || (inventory.metadata as any)?.valid === false) throw new Error('A valid stories.yaml revision is required');
+    const [acceptance] = await this.db.select().from(reviewDecisions).where(and(eq(reviewDecisions.artifactRevisionId, inventory.id), eq(reviewDecisions.kind, 'accepted'))).orderBy(desc(reviewDecisions.createdAt)).limit(1);
+    if (!acceptance) throw new Error('The exact stories.yaml revision must receive MIC human approval before synchronization');
     const parsed = parseYaml(inventory.content), entries = Array.isArray(parsed) ? parsed : parsed?.stories;
     if (!Array.isArray(entries)) throw new Error('stories.yaml does not contain a story list');
-    const rows = [];
-    for (const [order, entry] of entries.entries()) {
-      const storyKey = String(entry.id);
-      const [row] = await this.db.insert(storyUnits).values({ id: `story_${randomUUID()}`, workstreamId, storyKey, order, title: String(entry.title ?? storyKey), description: String(entry.description ?? ''), status: String(entry.status ?? 'backlog'), parentArtifactId: inventory.id, metadata: entry }).onConflictDoUpdate({ target: [storyUnits.workstreamId, storyUnits.storyKey], set: { order, title: String(entry.title ?? storyKey), description: String(entry.description ?? ''), parentArtifactId: inventory.id, metadata: entry, updatedAt: new Date() } }).returning();
-      rows.push(row!);
-    }
-    return rows;
+    const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
+    if (!stream) throw new Error('Workstream not found');
+    const [product] = await this.db.select().from(projects).where(eq(projects.id, stream.projectId));
+    const [epic] = await this.db.select().from(productEpics).where(eq(productEpics.workstreamId, workstreamId));
+    const existingItems = await this.db.select().from(productBacklogItems).where(eq(productBacklogItems.projectId, stream.projectId));
+    const prefix = product!.slug.split('-').slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P';
+    let nextOrder = existingItems.length ? Math.max(...existingItems.map(row => row.order)) + 1 : 0;
+    const rows: Array<{ story: typeof storyUnits.$inferSelect; backlogItem: typeof productBacklogItems.$inferSelect; changedRevision: boolean }> = [];
+    await this.db.transaction(async tx => {
+      for (const [order, entry] of entries.entries()) {
+        if (!entry?.id) throw new Error(`stories.yaml entry ${order + 1} has no BMAD story key`);
+        const storyKey = String(entry.id), title = String(entry.title ?? storyKey), description = String(entry.description ?? '');
+        const [story] = await tx.insert(storyUnits).values({ id: `story_${randomUUID()}`, workstreamId, storyKey, order, title, description, status: String(entry.status ?? 'backlog'), parentArtifactId: inventory.id, metadata: { ...entry, sourceArtifactHash: inventory.contentHash } }).onConflictDoUpdate({ target: [storyUnits.workstreamId, storyUnits.storyKey], set: { order, title, description, parentArtifactId: inventory.id, metadata: { ...entry, sourceArtifactHash: inventory.contentHash }, updatedAt: new Date() } }).returning();
+        const prior = existingItems.find(value => value.storyUnitId === story!.id);
+        const criteria = entry.acceptanceCriteria ?? entry.acceptance_criteria ?? [];
+        const changedRevision = Boolean(prior?.sourceArtifactId && prior.sourceArtifactId !== inventory.id);
+        let backlogItem;
+        if (prior) {
+          [backlogItem] = await tx.update(productBacklogItems).set({ epicId: epic?.id, workstreamId, sourceArtifactId: inventory.id, sourceArtifactHash: inventory.contentHash, sourceStoryKey: storyKey, title, value: String(entry.value ?? description), description, acceptanceCriteria: Array.isArray(criteria) ? criteria.map(String) : [], updatedAt: new Date() }).where(eq(productBacklogItems.id, prior.id)).returning();
+        } else {
+          [backlogItem] = await tx.insert(productBacklogItems).values({ id: `pbi_${randomUUID()}`, projectId: stream.projectId, epicId: epic?.id, workstreamId, storyUnitId: story!.id, sourceArtifactId: inventory.id, sourceArtifactHash: inventory.contentHash, sourceStoryKey: storyKey, deliveryPath: 'spec-epic', deliveryRationale: 'Accepted BMAD Story Breakdown', reference: `${prefix}-${existingItems.length + rows.length + 1}`, kind: 'story', title, value: String(entry.value ?? description), description, acceptanceCriteria: Array.isArray(criteria) ? criteria.map(String) : [], status: 'proposed', order: nextOrder++ }).returning();
+        }
+        await tx.insert(auditEvents).values({ aggregateType: 'story_projection', aggregateId: story!.id, action: changedRevision ? 'revision.updated' : 'synchronized', actor: acceptance.actor, detail: { workstreamId, artifactRevisionId: inventory.id, artifactHash: inventory.contentHash, storyKey, backlogItemId: backlogItem!.id }, idempotencyKey: `${story!.id}:${inventory.id}:product-backlog` }).onConflictDoNothing();
+        rows.push({ story: story!, backlogItem: backlogItem!, changedRevision });
+      }
+    });
+    return { artifact: { id: inventory.id, path: inventory.path, contentHash: inventory.contentHash, acceptedBy: acceptance.actor }, stories: rows };
   }
 
   list(workstreamId: string) { return this.db.select().from(storyUnits).where(eq(storyUnits.workstreamId, workstreamId)).orderBy(asc(storyUnits.order)); }
@@ -33,9 +55,12 @@ export class StoryDeliveryService {
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, story.workstreamId));
     const [parent] = story.parentArtifactId ? await this.db.select().from(artifactRevisions).where(eq(artifactRevisions.id, story.parentArtifactId)) : [];
     if (!stream || !parent || (parent.metadata as any)?.valid === false) throw new Error('Story parent context is invalid');
+    const [accepted] = await this.db.select().from(reviewDecisions).where(and(eq(reviewDecisions.artifactRevisionId, parent.id), eq(reviewDecisions.kind, 'accepted'))).limit(1);
+    if (!accepted) throw new Error('The Story parent artifact requires MIC human approval before Build');
+    const active = await this.db.select().from(workflowSessions).where(and(eq(workflowSessions.storyUnitId, story.id), inArray(workflowSessions.status, ['QUEUED', 'RESOURCE_WAITING', 'RUNNING', 'WAITING_FOR_INPUT', 'BLOCKED', 'PAUSED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION']))).limit(1);
+    if (active.length) throw new Error('This Story already has an active BMAD Build session');
     if (skill === 'bmad-build-auto' && (!story.description.trim() || !parent.path.endsWith('stories.yaml'))) throw new Error('Build Auto requires one bounded story and its valid parent inventory');
-    await this.db.update(storyUnits).set({ status: 'queued', updatedAt: new Date() }).where(eq(storyUnits.id, story.id));
-    return { workstreamId: stream.id, skill, action: undefined, args: { storyId: story.storyKey, storiesPath: parent.path }, prompt: `Implement exactly story ${story.storyKey}: ${story.title}\n\n${story.description}\n\nParent inventory: ${parent.path}. Do not select or implement any other story.` };
+    return { workstreamId: stream.id, storyUnitId: story.id, skill, action: undefined, args: { storyId: story.storyKey, storiesPath: parent.path, artifactRevisionId: parent.id, artifactHash: parent.contentHash }, prompt: `Implement exactly story ${story.storyKey}: ${story.title}\n\n${story.description}\n\nAccepted parent inventory: ${parent.path} (${parent.contentHash}). Do not select or implement any other story.` };
   }
 
   async update(storyId: string, status: string, evidence: Record<string, unknown>, actor: string) {
