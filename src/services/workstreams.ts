@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { auditEvents, outboxEvents, repositories, workflowDefinitions, workstreams } from '../db/schema.js';
+import { auditEvents, outboxEvents, projects, repositories, workflowDefinitions, workstreams } from '../db/schema.js';
 import { durableSlug } from './slugs.js';
 
 function stable(prefix: string, key: string) {
@@ -25,7 +25,11 @@ export class WorkstreamService {
     });
   }
 
-  list(projectId?: string) { return projectId ? this.db.select().from(workstreams).where(eq(workstreams.projectId, projectId)).orderBy(desc(workstreams.updatedAt)) : this.db.select().from(workstreams).orderBy(desc(workstreams.updatedAt)); }
+  async list(projectId?: string) {
+    if (projectId) return this.db.select().from(workstreams).where(eq(workstreams.projectId, projectId)).orderBy(desc(workstreams.updatedAt));
+    const rows = await this.db.select({ stream: workstreams }).from(workstreams).innerJoin(projects, eq(workstreams.projectId, projects.id)).where(eq(projects.status, 'active')).orderBy(desc(workstreams.updatedAt));
+    return rows.map(row => row.stream);
+  }
 
   async getByReference(reference: string, projectId?: string) {
     const [byId] = await this.db.select().from(workstreams).where(eq(workstreams.id, reference)).limit(1);

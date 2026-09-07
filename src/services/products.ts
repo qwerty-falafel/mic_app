@@ -15,7 +15,7 @@ export class ProductService {
   }
 
   async portfolio(projectDelivery: (workstreamId: string) => Promise<any>) {
-    const rows = await this.db.select().from(projects).orderBy(asc(projects.name));
+    const rows = await this.db.select().from(projects).where(eq(projects.status, 'active')).orderBy(asc(projects.name));
     return Promise.all(rows.map(async product => {
       const [[activeGoal], [currentSprint], [repositoryCount], deliveries] = await Promise.all([
         this.db.select().from(productGoals).where(and(eq(productGoals.projectId, product.id), eq(productGoals.status, 'active'))).orderBy(desc(productGoals.updatedAt)).limit(1),

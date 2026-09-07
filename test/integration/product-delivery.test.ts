@@ -130,6 +130,11 @@ describe('product model and delivery lifecycle projection', () => {
       expect(document.statusCode).toBe(200);
       expect(document.headers['content-type']).toContain('text/html');
     }
+    const archivedDelivery = (await app.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'archived-product-delivery' }, payload: { projectId: product.id, title: 'Historical validation', intent: 'Retain evidence without showing active work.', path: 'project' } })).json<any>();
+    await app.inject({ method: 'PATCH', url: `/products/${product.id}`, payload: { status: 'archived' } });
+    expect((await app.inject({ method: 'GET', url: '/products' })).json<any[]>()).not.toContainEqual(expect.objectContaining({ product: expect.objectContaining({ id: product.id }) }));
+    expect((await app.inject({ method: 'GET', url: '/workstreams' })).json<any[]>()).not.toContainEqual(expect.objectContaining({ id: archivedDelivery.id }));
+    expect((await app.inject({ method: 'GET', url: `/products/${product.slug}` })).json()).toMatchObject({ product: { id: product.id, status: 'archived' } });
   });
 
   it('keeps Brief proposals revision-bound and applies only an accepted revision', async () => {
