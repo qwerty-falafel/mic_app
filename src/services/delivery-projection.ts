@@ -75,7 +75,7 @@ export class DeliveryProjectionService {
     let attention: Record<string, unknown> | null = null;
 
     if (integrated) { currentId = 'integration'; state = 'complete'; reason = 'The accepted result has been integrated.'; }
-    else if (invalid) { currentId = stageForSkill(active?.skill, active?.action) ?? (invalid.type === 'spec' ? 'specification' : currentId); state = 'needs-attention'; reason = `The current ${invalid.path} revision is invalid and must be corrected.`; attention = { type: 'artifact', id: invalid.id, label: invalid.path }; }
+    else if (invalid) { currentId = stageForSkill(active?.skill, active?.action) ?? (invalid.type === 'spec' ? 'specification' : invalid.type === 'story-inventory' ? 'story-plan' : currentId); state = 'needs-attention'; reason = `The current ${invalid.path} revision is invalid and must be corrected.`; attention = { type: 'artifact', id: invalid.id, label: invalid.path }; }
     else if (active) {
       currentId = stageForSkill(active.skill, active.action) ?? currentId;
       state = active.status === 'WAITING_FOR_INPUT' ? 'awaiting-decision' : active.status === 'BLOCKED' ? 'blocked' : active.status === 'PAUSED' || active.status === 'INTERRUPTED' || active.status === 'NEEDS_CLASSIFICATION' ? 'needs-attention' : 'active';

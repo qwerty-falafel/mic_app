@@ -220,7 +220,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
     const [owner] = await db.select().from(workflowSessions).where(eq(workflowSessions.id, artifact.sessionId));
     if (!owner) return reply.code(409).send({ error: 'owning_session_unavailable' });
     const decision = await artifacts.review(artifactId, { kind: 'feedback', feedback: body.feedback, actor: body.actor });
-    const session = await sessions.start({ workstreamId: artifact.workstreamId, skill: owner.skill, action: owner.action ?? undefined, args: { ...(owner.args as Record<string, unknown>), artifactPath: artifact.path, artifactRevisionId: artifact.id }, prompt: `Revise and validate ${artifact.path} from revision ${artifact.id}. Reviewer feedback:\n${body.feedback}` }, body.actor);
+    const session = await sessions.revise(owner.id, `Revise and validate ${artifact.path} from revision ${artifact.id}. Reviewer feedback:\n${body.feedback}`, body.actor, key(request));
     return reply.code(202).send({ decision, session });
   });
   app.get('/attention', async () => artifacts.attention());
