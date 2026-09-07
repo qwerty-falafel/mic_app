@@ -162,6 +162,14 @@ export const sprintBacklogItems = pgTable('sprint_backlog_items', {
   sprintId: text('sprint_id').notNull().references(() => scrumSprints.id, { onDelete: 'cascade' }), backlogItemId: text('backlog_item_id').notNull().references(() => productBacklogItems.id, { onDelete: 'cascade' }), selectedAt: createdAt(),
 }, table => [uniqueIndex('sprint_backlog_item_idx').on(table.sprintId, table.backlogItemId), index('sprint_backlog_item_lookup_idx').on(table.backlogItemId)]);
 
+export const sprintReviews = pgTable('sprint_reviews', {
+  id: text('id').primaryKey(), sprintId: text('sprint_id').notNull().references(() => scrumSprints.id, { onDelete: 'cascade' }).unique(), summary: text('summary').notNull(), stakeholderFeedback: text('stakeholder_feedback').notNull().default(''), createdAt: createdAt(),
+});
+
+export const sprintRetrospectives = pgTable('sprint_retrospectives', {
+  id: text('id').primaryKey(), sprintId: text('sprint_id').notNull().references(() => scrumSprints.id, { onDelete: 'cascade' }).unique(), insight: text('insight').notNull(), adaptation: text('adaptation').notNull(), createdAt: createdAt(),
+});
+
 export const increments = pgTable('increments', {
   id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), sprintId: text('sprint_id').references(() => scrumSprints.id, { onDelete: 'set null' }), title: text('title').notNull(), description: text('description').notNull().default(''), definitionOfDone: text('definition_of_done').notNull(), evidence: jsonb('evidence').notNull().default({}), createdAt: createdAt(),
 }, table => [index('increments_project_idx').on(table.projectId, table.createdAt)]);

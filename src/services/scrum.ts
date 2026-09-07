@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { features, increments, productBacklogItems, productEpics, projects, scrumSprints, sprintBacklogItems, storyUnits, workstreams } from '../db/schema.js';
+import { features, increments, productBacklogItems, productEpics, projects, scrumSprints, sprintBacklogItems, sprintRetrospectives, sprintReviews, storyUnits, workstreams } from '../db/schema.js';
 
 const monthMs = 31 * 24 * 60 * 60 * 1000;
 
@@ -49,8 +49,12 @@ export class ScrumService {
 
   async listSprints(projectId: string) {
     const rows = await this.db.select().from(scrumSprints).where(eq(scrumSprints.projectId, projectId)).orderBy(desc(scrumSprints.number));
-    const selected = rows.length ? await this.db.select({ sprintId: sprintBacklogItems.sprintId, item: productBacklogItems }).from(sprintBacklogItems).innerJoin(productBacklogItems, eq(sprintBacklogItems.backlogItemId, productBacklogItems.id)).where(inArray(sprintBacklogItems.sprintId, rows.map(row => row.id))) : [];
-    return rows.map(sprint => ({ ...sprint, items: selected.filter(value => value.sprintId === sprint.id).map(value => value.item) }));
+    const [selected, reviews, retrospectives] = await Promise.all([
+      rows.length ? this.db.select({ sprintId: sprintBacklogItems.sprintId, item: productBacklogItems }).from(sprintBacklogItems).innerJoin(productBacklogItems, eq(sprintBacklogItems.backlogItemId, productBacklogItems.id)).where(inArray(sprintBacklogItems.sprintId, rows.map(row => row.id))) : [],
+      rows.length ? this.db.select().from(sprintReviews).where(inArray(sprintReviews.sprintId, rows.map(row => row.id))) : [],
+      rows.length ? this.db.select().from(sprintRetrospectives).where(inArray(sprintRetrospectives.sprintId, rows.map(row => row.id))) : [],
+    ]);
+    return rows.map(sprint => ({ ...sprint, items: selected.filter(value => value.sprintId === sprint.id).map(value => value.item), review: reviews.find(value => value.sprintId === sprint.id) ?? null, retrospective: retrospectives.find(value => value.sprintId === sprint.id) ?? null }));
   }
 
   async selectItem(sprintId: string, backlogItemId: string) {
@@ -59,6 +63,9 @@ export class ScrumService {
     await this.db.insert(sprintBacklogItems).values({ sprintId, backlogItemId }).onConflictDoNothing();
     return this.listSprints(sprint.projectId);
   }
+  async removeItem(sprintId: string, backlogItemId: string) { await this.db.delete(sprintBacklogItems).where(and(eq(sprintBacklogItems.sprintId, sprintId), eq(sprintBacklogItems.backlogItemId, backlogItemId))); return { sprintId, backlogItemId }; }
+  async recordReview(sprintId: string, summary: string, stakeholderFeedback = '') { const [row] = await this.db.insert(sprintReviews).values({ id: `sprint_review_${randomUUID()}`, sprintId, summary, stakeholderFeedback }).onConflictDoUpdate({ target: sprintReviews.sprintId, set: { summary, stakeholderFeedback } }).returning(); return row!; }
+  async recordRetrospective(sprintId: string, insight: string, adaptation: string) { const [row] = await this.db.insert(sprintRetrospectives).values({ id: `sprint_retro_${randomUUID()}`, sprintId, insight, adaptation }).onConflictDoUpdate({ target: sprintRetrospectives.sprintId, set: { insight, adaptation } }).returning(); return row!; }
 
   async setSprintStatus(sprintId: string, status: 'planned' | 'active' | 'completed' | 'cancelled') {
     const [sprint] = await this.db.select().from(scrumSprints).where(eq(scrumSprints.id, sprintId));

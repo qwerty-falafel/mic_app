@@ -94,6 +94,9 @@ describe('product model and delivery lifecycle projection', () => {
     const sprint = (await app.inject({ method: 'POST', url: '/scrum-sprints', payload: { projectId: product.id, number: 1, goal: 'Deliver usable long-form playback', startsAt: '2026-09-07T09:00:00Z', endsAt: '2026-09-14T09:00:00Z' } })).json<any>();
     expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/items`, payload: { backlogItemId: backlogItem.id } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/status`, payload: { status: 'active' } })).json()).toMatchObject({ status: 'active', goal: 'Deliver usable long-form playback' });
+    expect((await app.inject({ method: 'PUT', url: `/scrum-sprints/${sprint.id}/review`, payload: { summary: 'Chunked playback is usable.', stakeholderFeedback: 'Test a longer document.' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'PUT', url: `/scrum-sprints/${sprint.id}/retrospective`, payload: { insight: 'Bounded queues are easier to verify.', adaptation: 'Keep explicit cancellation tests.' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/scrum-sprints?projectId=${product.id}` })).json<any[]>()[0]).toMatchObject({ review: { summary: 'Chunked playback is usable.' }, retrospective: { adaptation: 'Keep explicit cancellation tests.' } });
     expect((await app.inject({ method: 'POST', url: `/product-backlog/${backlogItem.id}/status`, payload: { status: 'review' } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: `/product-backlog/${backlogItem.reference}` })).json()).toMatchObject({ item: { id: backlogItem.id, status: 'review' }, epic: { id: epic.id } });
     expect((await app.inject({ method: 'POST', url: `/product-backlog/${backlogItem.id}/status`, payload: { status: 'done' } })).statusCode).toBe(200);
