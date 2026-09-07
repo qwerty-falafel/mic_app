@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { features, increments, productBacklogItems, projects, scrumSprints, sprintBacklogItems, storyUnits, workstreams } from '../db/schema.js';
+import { features, increments, productBacklogItems, productEpics, projects, scrumSprints, sprintBacklogItems, storyUnits, workstreams } from '../db/schema.js';
 
 const monthMs = 31 * 24 * 60 * 60 * 1000;
 
@@ -9,17 +9,35 @@ export class ScrumService {
   constructor(private readonly db: Database) {}
 
   listBacklog(projectId: string) {
-    return this.db.select({ item: productBacklogItems, feature: features, delivery: workstreams, story: storyUnits })
+    return this.db.select({ item: productBacklogItems, feature: features, epic: productEpics, delivery: workstreams, story: storyUnits })
       .from(productBacklogItems)
       .leftJoin(features, eq(productBacklogItems.featureId, features.id))
+      .leftJoin(productEpics, eq(productBacklogItems.epicId, productEpics.id))
       .leftJoin(workstreams, eq(productBacklogItems.workstreamId, workstreams.id))
       .leftJoin(storyUnits, eq(productBacklogItems.storyUnitId, storyUnits.id))
       .where(eq(productBacklogItems.projectId, projectId)).orderBy(asc(productBacklogItems.order), asc(productBacklogItems.createdAt));
   }
 
-  async createBacklogItem(input: { projectId: string; featureId?: string; workstreamId?: string; storyUnitId?: string; kind: string; title: string; description?: string; order?: number; acceptanceCriteria?: string[] }) {
-    const [row] = await this.db.insert(productBacklogItems).values({ id: `pbi_${randomUUID()}`, ...input, description: input.description ?? '', order: input.order ?? 0, acceptanceCriteria: input.acceptanceCriteria ?? [] }).returning();
+  async createBacklogItem(input: { projectId: string; featureId?: string; epicId?: string; workstreamId?: string; storyUnitId?: string; kind: string; title: string; value?: string; description?: string; order?: number; acceptanceCriteria?: string[]; acceptanceSignal?: string; dependencies?: string[] }) {
+    const [product] = await this.db.select().from(projects).where(eq(projects.id, input.projectId));
+    if (!product) throw new Error('Product not found');
+    const existing = await this.db.select().from(productBacklogItems).where(eq(productBacklogItems.projectId, input.projectId));
+    const prefix = product.slug.split('-').slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P';
+    const [row] = await this.db.insert(productBacklogItems).values({ id: `pbi_${randomUUID()}`, ...input, reference: `${prefix}-${existing.length + 1}`, value: input.value ?? input.description ?? '', description: input.description ?? '', order: input.order ?? existing.length, acceptanceCriteria: input.acceptanceCriteria ?? [], acceptanceSignal: input.acceptanceSignal ?? '', dependencies: input.dependencies ?? [] }).returning();
     return row!;
+  }
+
+  async getBacklogItem(reference: string) {
+    const rows = await this.db.select({ item: productBacklogItems, feature: features, epic: productEpics, delivery: workstreams }).from(productBacklogItems).leftJoin(features, eq(productBacklogItems.featureId, features.id)).leftJoin(productEpics, eq(productBacklogItems.epicId, productEpics.id)).leftJoin(workstreams, eq(productBacklogItems.workstreamId, workstreams.id)).where(eq(productBacklogItems.reference, reference)).limit(1);
+    return rows[0];
+  }
+
+  async updateBacklogItem(itemId: string, input: Partial<{ featureId: string | null; epicId: string | null; title: string; value: string; description: string; acceptanceCriteria: string[]; acceptanceSignal: string; dependencies: string[] }>) { const [row] = await this.db.update(productBacklogItems).set({ ...input, updatedAt: new Date() }).where(eq(productBacklogItems.id, itemId)).returning(); if (!row) throw new Error('Product Backlog Item not found'); return row; }
+
+  async reorderBacklog(projectId: string, itemIds: string[]) {
+    const rows = await this.db.select().from(productBacklogItems).where(eq(productBacklogItems.projectId, projectId));
+    if (rows.length !== itemIds.length || rows.some(row => !itemIds.includes(row.id))) throw new Error('Backlog order must include every item in this Product exactly once');
+    return this.db.transaction(async tx => { for (let order = 0; order < itemIds.length; order++) await tx.update(productBacklogItems).set({ order, updatedAt: new Date() }).where(eq(productBacklogItems.id, itemIds[order]!)); return this.listBacklog(projectId); });
   }
 
   async createSprint(input: { projectId: string; number: number; goal: string; startsAt: Date; endsAt: Date }) {
@@ -53,7 +71,7 @@ export class ScrumService {
     return updated!;
   }
 
-  async updateBacklogStatus(itemId: string, status: 'proposed' | 'ready' | 'in-progress' | 'done' | 'removed') {
+  async updateBacklogStatus(itemId: string, status: 'proposed' | 'ready' | 'in-progress' | 'review' | 'blocked' | 'done' | 'removed') {
     const [updated] = await this.db.update(productBacklogItems).set({ status, updatedAt: new Date() }).where(eq(productBacklogItems.id, itemId)).returning();
     if (!updated) throw new Error('Product Backlog Item not found');
     return updated;

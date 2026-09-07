@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { epicFeatures, features, productBacklogItems, productBriefs, productEpics, productProposals, proposalDecisions } from '../db/schema.js';
+import { epicFeatures, features, productBacklogItems, productBriefs, productEpics, productProposals, projects, proposalDecisions } from '../db/schema.js';
 import { durableSlug } from './slugs.js';
 
 export type ProposalShape = {
@@ -80,6 +80,8 @@ export class ProductProposalService {
     }
     const existing = await tx.select().from(productBacklogItems).where(eq(productBacklogItems.projectId, projectId)).orderBy(asc(productBacklogItems.order));
     let order = existing.length ? Math.max(...existing.map(row => row.order)) + 1 : 0;
-    for (const item of proposal.items ?? []) await tx.insert(productBacklogItems).values({ id: `pbi_${randomUUID()}`, projectId, featureId: item.featureName ? featureMap.get(item.featureName) : undefined, epicId: item.epicName ? epicMap.get(item.epicName) : undefined, kind: item.kind, title: item.title, description: item.value, acceptanceCriteria: item.acceptanceCriteria ?? [], status: 'proposed', order: order++ });
+    const [product] = await tx.select().from(projects).where(eq(projects.id, projectId));
+    const prefix = product!.slug.split('-').slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P';
+    for (const item of proposal.items ?? []) await tx.insert(productBacklogItems).values({ id: `pbi_${randomUUID()}`, projectId, reference: `${prefix}-${order + 1}`, featureId: item.featureName ? featureMap.get(item.featureName) : undefined, epicId: item.epicName ? epicMap.get(item.epicName) : undefined, kind: item.kind, title: item.title, value: item.value, description: item.value, acceptanceCriteria: item.acceptanceCriteria ?? [], status: 'proposed', order: order++ });
   }
 }

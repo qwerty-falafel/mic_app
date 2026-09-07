@@ -88,11 +88,14 @@ describe('product model and delivery lifecycle projection', () => {
     const valid = await app.inject({ method: 'POST', url: `/workstreams/${delivery.id}/actions/create-story-plan/validate`, payload: { actionToken: breakdown.actionToken } });
     expect(valid.statusCode).toBe(200);
 
-    const backlogItem = (await app.inject({ method: 'POST', url: '/product-backlog', payload: { projectId: product.id, featureId: feature.id, workstreamId: delivery.id, kind: 'epic', title: 'Long-form playback', acceptanceCriteria: ['Reads beyond 5,000 characters'] } })).json<any>();
+    const backlogItem = (await app.inject({ method: 'POST', url: '/product-backlog', payload: { projectId: product.id, featureId: feature.id, epicId: epic.id, workstreamId: delivery.id, kind: 'story', title: 'Long-form playback', value: 'A listener can hear a long document without manually splitting it.', acceptanceCriteria: ['Reads beyond 5,000 characters'] } })).json<any>();
+    expect(backlogItem.reference).toMatch(/^[A-Z]+-\d+$/);
     expect((await app.inject({ method: 'GET', url: `/product-backlog?projectId=${product.id}` })).json<any[]>()).toEqual([expect.objectContaining({ item: expect.objectContaining({ id: backlogItem.id }), feature: expect.objectContaining({ id: feature.id }), delivery: expect.objectContaining({ id: delivery.id }) })]);
     const sprint = (await app.inject({ method: 'POST', url: '/scrum-sprints', payload: { projectId: product.id, number: 1, goal: 'Deliver usable long-form playback', startsAt: '2026-09-07T09:00:00Z', endsAt: '2026-09-14T09:00:00Z' } })).json<any>();
     expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/items`, payload: { backlogItemId: backlogItem.id } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: `/scrum-sprints/${sprint.id}/status`, payload: { status: 'active' } })).json()).toMatchObject({ status: 'active', goal: 'Deliver usable long-form playback' });
+    expect((await app.inject({ method: 'POST', url: `/product-backlog/${backlogItem.id}/status`, payload: { status: 'review' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/product-backlog/${backlogItem.reference}` })).json()).toMatchObject({ item: { id: backlogItem.id, status: 'review' }, epic: { id: epic.id } });
     expect((await app.inject({ method: 'POST', url: `/product-backlog/${backlogItem.id}/status`, payload: { status: 'done' } })).statusCode).toBe(200);
     const increment = await app.inject({ method: 'POST', url: '/increments', payload: { projectId: product.id, sprintId: sprint.id, title: 'Long-form playback increment', evidence: { tests: 'passed' } } });
     expect(increment.statusCode).toBe(201);
