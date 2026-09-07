@@ -8,6 +8,11 @@ describe('value-shaped BMAD Story inventory', () => {
     expect(result.issues).toEqual([]);
     expect(result.stories[0]).toMatchObject({ beneficiary: 'long-form listener', capabilityIds: ['CAP-1', 'CAP-2'], specCheckpoint: true, doneCheckpoint: true });
   });
+  it('accepts an Oxford-comma capability list from BMAD', () => {
+    const result = analyseStoryInventory(`- id: "1"\n  title: Continuous long-form listening\n  description: >-\n    As a listener, I want the first audio chunk to start playing as soon as it is ready, so that I can hear arbitrarily long content without waiting for the whole synthesis.\n    Covers CAP-1, CAP-2, and CAP-3.\n`, '# Capabilities\n## CAP-1 First\n## CAP-2 Second\n## CAP-3 Third\n');
+    expect(result.issues).toEqual([]);
+    expect(result.stories[0]?.capabilityIds).toEqual(['CAP-1', 'CAP-2', 'CAP-3']);
+  });
   it('rejects task fragments, invalid schema, and unknown capabilities', () => {
     const result = analyseStoryInventory(`- id: 1\n  title: Implement chunker\n  description: Split at paragraph boundaries.\n  status: backlog\n- id: "2"\n  title: Play audio\n  description: As a user, I want to hear audio, so that audio plays. Covers CAP-99.\n`, spec);
     expect(result.issues).toEqual(expect.arrayContaining([expect.stringContaining('quoted string'), expect.stringContaining('beneficiary'), expect.stringContaining('must not contain status'), expect.stringContaining('unknown capability CAP-99')]));

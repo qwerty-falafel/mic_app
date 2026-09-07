@@ -24,9 +24,11 @@ export function analyseStoryInventory(content: string, specContent: string) {
     if ('status' in entry) issues.push(`${label} must not contain status`);
     for (const key of ['spec_checkpoint', 'done_checkpoint']) if (key in entry && typeof entry[key] !== 'boolean') issues.push(`${label} ${key} must be boolean`);
     if ('invoke_dev_with' in entry && typeof entry.invoke_dev_with !== 'string') issues.push(`${label} invoke_dev_with must be a string`);
-    const match = description.trim().match(/^As (?:a|an|the) ([^,]+), I want to ([\s\S]+?), so that ([\s\S]+?)\.\s+Covers ((?:CAP-\d+(?:\s*(?:,|and)\s*)?)+)\.?$/i);
-    if (!match) { issues.push(`${label} description must state beneficiary, observable outcome, motive, and CAP-N coverage`); continue; }
-    const capabilityIds = [...new Set(match[4]!.match(/CAP-\d+/gi)?.map(value => value.toUpperCase()) ?? [])];
+    const match = description.trim().match(/^As (?:a|an|the) ([^,]+), I want (?:to )?([\s\S]+?), so that ([\s\S]+?)\.\s+Covers ([\s\S]+?)\.?$/i);
+    const coverage = match?.[4]?.trim() ?? '';
+    const capabilityIds = [...new Set(coverage.match(/CAP-\d+/gi)?.map(value => value.toUpperCase()) ?? [])];
+    const coverageRemainder = coverage.replace(/CAP-\d+/gi, '').replace(/\band\b/gi, '').replace(/[\s,.]/g, '');
+    if (!match || !capabilityIds.length || coverageRemainder) { issues.push(`${label} description must state beneficiary, observable outcome, motive, and CAP-N coverage`); continue; }
     for (const capability of capabilityIds) if (!available.has(capability)) issues.push(`${label} cites unknown capability ${capability}`);
     const storyWarnings: string[] = [];
     if (genericBeneficiary.test(match[1]!.trim())) storyWarnings.push('Beneficiary may be too generic');

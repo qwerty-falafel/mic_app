@@ -56,7 +56,18 @@ export class ArtifactService {
       const content = await readFile(resolve(root, path), 'utf8');
       const hash = createHash('sha256').update(content).digest('hex');
       const existing = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path), eq(artifactRevisions.contentHash, hash))).limit(1);
-      if (existing.length) { created.push(existing[0]!); continue; }
+      if (existing.length) {
+        let row = existing[0]!;
+        if (row.type === 'story-inventory') {
+          const parsed = parseArtifact(path, content), issues: string[] = [];
+          const specPath = `${dirname(path)}/SPEC.md`;
+          if (!pathSet.has(specPath)) issues.push('stories.yaml requires its governing sibling SPEC.md');
+          const storyAnalysis = analyseStoryInventory(content, pathSet.has(specPath) ? await readFile(resolve(root, specPath), 'utf8') : '');
+          issues.push(...storyAnalysis.issues);
+          [row] = await this.db.update(artifactRevisions).set({ status: issues.length ? 'quarantined' : parsed.status ?? null, metadata: { ...parsed, valid: issues.length === 0, issues, storyOutcomes: storyAnalysis.stories, warnings: storyAnalysis.warnings } }).where(eq(artifactRevisions.id, row.id)).returning();
+        }
+        created.push(row!); continue;
+      }
       const parsed = parseArtifact(path, content), issues: string[] = [];
       if (parsed.status && !statuses.has(parsed.status)) issues.push(`Unrecognized status: ${parsed.status}`);
       if (parsed.type === 'spec') {
