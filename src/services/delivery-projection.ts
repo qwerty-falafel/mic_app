@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { artifactRevisions, featureDeliveryCases, features, integrationDecisions, reviewDecisions, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
+import { artifactRevisions, conversationTurns, featureDeliveryCases, features, integrationDecisions, reviewDecisions, storyUnits, workflowSessions, workstreams } from '../db/schema.js';
 
 export type StageState = 'not-started' | 'ready' | 'active' | 'awaiting-decision' | 'blocked' | 'complete' | 'superseded' | 'needs-attention';
 export type DeliveryAction = { id: string; label: string; description: string; eligible: boolean; reason?: string; transition: string; operation?: { skill: string; action?: string } };
@@ -63,6 +63,9 @@ export class DeliveryProjectionService {
     const storyInventory = latest.find(value => value.type === 'story-inventory' && valid(value));
     const invalid = latest.find(value => !valid(value));
     const active = sessions.find(value => ['QUEUED', 'RESOURCE_WAITING', 'RUNNING', 'WAITING_FOR_INPUT', 'BLOCKED', 'PAUSED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION'].includes(value.status));
+    const failedBreakdowns = sessions.filter(value => value.status === 'FAILED' && value.skill === 'bmad-spec' && value.action === 'create-stories');
+    const failedTurns = failedBreakdowns.length ? await this.db.select().from(conversationTurns).where(inArray(conversationTurns.sessionId, failedBreakdowns.map(value => value.id))) : [];
+    const recoverableBreakdown = failedBreakdowns.sort((left, right) => failedTurns.filter(turn => turn.sessionId === right.id).length - failedTurns.filter(turn => turn.sessionId === left.id).length || right.createdAt.getTime() - left.createdAt.getTime())[0];
     const integrated = integrations.some(value => value.status === 'integrated') || stream.status === 'COMPLETED';
     const unfinished = stories.filter(value => !['done', 'complete', 'completed'].includes(value.status));
 
@@ -81,6 +84,10 @@ export class DeliveryProjectionService {
         : active.status === 'WAITING_FOR_INPUT' && active.action === 'create-stories' ? 'BMAD has proposed a Story plan and needs your checkpoint decisions before it can write stories.yaml.'
         : `${operationLabel} requires attention before it can continue.`;
       attention = { type: 'session', id: active.id, label: operationLabel, status: active.status };
+    } else if (stream.path === 'spec-epic' && spec && accepted.has(spec.id) && !storyInventory && recoverableBreakdown) {
+      currentId = 'story-plan'; state = 'needs-attention';
+      reason = 'The existing BMAD Story Breakdown stopped with an error. Its conversation and accepted decisions are preserved for recovery.';
+      attention = { type: 'session', id: recoverableBreakdown.id, label: 'BMAD Story Breakdown', status: recoverableBreakdown.status };
     } else if (stream.path === 'spec-epic') {
       if (!spec) { currentId = 'specification'; reason = 'A valid SPEC.md has not been created yet.'; }
       else if (!accepted.has(spec.id)) { currentId = 'specification'; state = 'awaiting-decision'; reason = 'The latest valid specification needs acceptance or revision feedback.'; attention = { type: 'artifact', id: spec.id, label: spec.path }; }
@@ -93,7 +100,8 @@ export class DeliveryProjectionService {
 
     const baseActions: DeliveryAction[] = [];
     if (attention?.type === 'session') {
-      if (active?.status === 'PAUSED' || active?.status === 'INTERRUPTED') baseActions.push(action('resume-session', 'Resume conversation', 'Continue from the preserved provider checkpoint.', currentId, undefined));
+      const attended = active ?? recoverableBreakdown;
+      if (attended && ['PAUSED', 'INTERRUPTED', 'FAILED'].includes(attended.status)) baseActions.push(action('resume-session', 'Resume from checkpoint', 'Continue the preserved BMAD conversation and its accepted decisions.', currentId, undefined));
       else baseActions.push(action('open-session', state === 'active' ? 'View conversation' : 'Answer BMAD', state === 'active' ? 'Follow the current run without sending input.' : 'Read the exact question and respond in the same session.', currentId));
     } else if (attention?.type === 'artifact') baseActions.push(action('review-artifact', invalid ? 'Correct artifact' : storyInventory && attention.id === storyInventory.id ? 'Review Story Breakdown' : 'Review specification', invalid ? 'Inspect validation problems and request a corrected revision.' : 'Review BMAD technical output, then accept this exact revision or request specific changes through MIC.', invalid ? currentId : 'story-plan'));
     else if (stream.path === 'undecided') baseActions.push(action('choose-path', 'Choose delivery approach', 'Review the Brief and choose the BMAD path that fits its size and uncertainty.', 'classification', { skill: 'bmad-help' }));

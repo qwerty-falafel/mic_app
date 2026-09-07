@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
-import { artifactRevisions, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
+import { artifactRevisions, conversationTurns, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
 import { StoryDeliveryService } from '../../src/services/story-delivery.js';
 import { analyseStoryInventory } from '../../src/services/story-outcomes.js';
 
@@ -90,6 +90,18 @@ describe('product model and delivery lifecycle projection', () => {
     expect(stale.statusCode).toBe(409);
     const valid = await app.inject({ method: 'POST', url: `/workstreams/${delivery.id}/actions/create-story-plan/validate`, payload: { actionToken: breakdown.actionToken } });
     expect(valid.statusCode).toBe(200);
+
+    await connection.db.insert(workflowSessions).values([
+      { id: 'failed_breakdown_durable', workstreamId: delivery.id, skill: 'bmad-spec', action: 'create-stories', prompt: 'Story plan', status: 'FAILED', providerSessionId: 'provider_durable', createdAt: new Date('2026-09-07T09:00:00Z') },
+      { id: 'failed_breakdown_retry', workstreamId: delivery.id, skill: 'bmad-spec', action: 'create-stories', prompt: 'Retry', status: 'FAILED', providerSessionId: 'provider_retry', createdAt: new Date('2026-09-07T10:00:00Z') },
+    ]);
+    await connection.db.insert(conversationTurns).values([
+      { id: 'turn_durable_1', sessionId: 'failed_breakdown_durable', sequence: 1, role: 'assistant', content: 'Two Stories proposed' },
+      { id: 'turn_durable_2', sessionId: 'failed_breakdown_durable', sequence: 2, role: 'user', content: 'Accepted' },
+      { id: 'turn_retry_1', sessionId: 'failed_breakdown_retry', sequence: 1, role: 'user', content: 'Retry from Brief' },
+    ]);
+    const recovery = (await app.inject({ method: 'GET', url: `/workstreams/${delivery.id}/lifecycle` })).json<any>();
+    expect(recovery).toMatchObject({ currentStage: { id: 'story-plan', state: 'needs-attention' }, attention: { id: 'failed_breakdown_durable', status: 'FAILED' }, recommendedAction: { id: 'resume-session', label: 'Resume from checkpoint' } });
 
     const backlogItem = (await app.inject({ method: 'POST', url: '/product-backlog', payload: { projectId: product.id, featureId: feature.id, epicId: epic.id, workstreamId: delivery.id, kind: 'story', title: 'Long-form playback', value: 'A listener can hear a long document without manually splitting it.', acceptanceCriteria: ['Reads beyond 5,000 characters'] } })).json<any>();
     expect(backlogItem.reference).toMatch(/^[A-Z]+-\d+$/);
