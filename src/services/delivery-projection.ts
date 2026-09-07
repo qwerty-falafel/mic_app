@@ -99,7 +99,10 @@ export class DeliveryProjectionService {
     }
 
     const baseActions: DeliveryAction[] = [];
-    if (attention?.type === 'session') {
+    if (integrated) {
+      // A completed delivery has no next lifecycle operation. Its history and
+      // evidence remain available without presenting an already-satisfied gate.
+    } else if (attention?.type === 'session') {
       const attended = active ?? recoverableBreakdown;
       if (attended && ['PAUSED', 'INTERRUPTED', 'FAILED'].includes(attended.status)) baseActions.push(action('resume-session', 'Resume from checkpoint', 'Continue the preserved BMAD conversation and its accepted decisions.', currentId, undefined));
       else baseActions.push(action('open-session', state === 'active' ? 'View conversation' : 'Answer BMAD', state === 'active' ? 'Follow the current run without sending input.' : 'Read the exact question and respond in the same session.', currentId));
@@ -115,7 +118,7 @@ export class DeliveryProjectionService {
     else baseActions.push(action('start-specialist-work', 'Start specialist work', 'Choose the focused research, review, or correction operation.', 'review'));
 
     const readStoriesEligible = Boolean(storyInventory && accepted.has(storyInventory.id));
-    const alternatives: DeliveryAction[] = [
+    const alternatives: DeliveryAction[] = integrated ? [] : [
       action('index-stories', 'Synchronize accepted Stories', 'Project the accepted stories.yaml revision into the one Product Backlog.', 'delivery', undefined, readStoriesEligible, readStoriesEligible ? undefined : 'An accepted valid stories.yaml revision does not exist yet.'),
       action('advanced-actions', 'Advanced actions', 'Inspect every eligible installed BMAD operation and its prerequisites.', currentId),
     ];

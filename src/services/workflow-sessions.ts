@@ -53,6 +53,16 @@ export function storyStatusFromSession(status: string, doneCheckpoint: boolean) 
   return status === 'FINISHED' ? (doneCheckpoint ? 'review' : 'done') : status === 'BLOCKED' ? 'blocked' : status === 'FAILED' ? 'review' : status === 'WAITING_FOR_INPUT' ? 'in-progress' : undefined;
 }
 
+export function needsHumanClassification(skill: string, status: WorkflowRunResult['status'], waiting: boolean, artifactRefs: string[], rawAdapterState: Record<string, unknown>) {
+  if (status !== 'done' || skill === 'bmad-help' || waiting || artifactRefs.length > 0) return false;
+  const verifiedBuild = ['bmad-build', 'bmad-build-auto'].includes(skill) && (rawAdapterState.verification as { passed?: boolean } | undefined)?.passed === true;
+  return !verifiedBuild;
+}
+
+export function canReviseSession(status: string) {
+  return ['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION', 'FINISHED', 'FAILED'].includes(status);
+}
+
 export function nodeVerificationScripts(packageText: string) {
   const value = JSON.parse(packageText);
   const scripts = value?.scripts && typeof value.scripts === 'object' ? value.scripts : {};
@@ -175,7 +185,7 @@ export class WorkflowSessionService {
     const parsed = conversationFromJsonl(String(result.rawAdapterState.stdout ?? ''));
     const existing = await this.db.select().from(conversationTurns).where(eq(conversationTurns.sessionId, session.id));
     const waiting = result.status === 'done' && awaitsInput(session.skill, parsed.content, result.artifactRefs);
-    const ambiguous = result.status === 'done' && session.skill !== 'bmad-help' && !waiting && result.artifactRefs.length === 0;
+    const ambiguous = needsHumanClassification(session.skill, result.status, waiting, result.artifactRefs, result.rawAdapterState);
     const [persisted] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, session.id));
     const observedStatus = result.status === 'blocked' ? 'BLOCKED' : result.status === 'cancelled' ? 'CANCELLED' : result.status === 'failed' ? 'FAILED' : waiting ? 'WAITING_FOR_INPUT' : ambiguous ? 'NEEDS_CLASSIFICATION' : 'FINISHED';
     // Pause and cancel update the durable state before SIGTERM reaches OpenCode.
@@ -211,7 +221,10 @@ export class WorkflowSessionService {
   }
 
   async revise(sessionId: string, content: string, actor = 'api', commandKey: string = randomUUID()) {
-    return this.continueSession(sessionId, content, actor, commandKey, ['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED', 'FINISHED', 'FAILED']);
+    const [session] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId));
+    if (!session) throw new Error('Workflow session not found');
+    if (!canReviseSession(session.status)) throw new Error('Workflow session is not available for revision');
+    return this.continueSession(sessionId, content, actor, commandKey, [session.status]);
   }
 
   private async continueSession(sessionId: string, content: string, actor: string, commandKey: string, allowedStatuses: string[]) {

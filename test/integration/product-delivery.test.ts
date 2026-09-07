@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { createApp } from '../../src/api.js';
 import { createDatabase } from '../../src/db/client.js';
 import { migrateDatabase } from '../../src/db/migrate.js';
-import { artifactRevisions, conversationTurns, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
+import { artifactRevisions, conversationTurns, integrationDecisions, productEpics, reviewDecisions, scrumSprints, workflowSessions } from '../../src/db/schema.js';
 import { StoryDeliveryService } from '../../src/services/story-delivery.js';
 import { analyseStoryInventory } from '../../src/services/story-outcomes.js';
 
@@ -148,6 +148,15 @@ describe('product model and delivery lifecycle projection', () => {
     expect((await app.inject({ method: 'GET', url: '/products' })).json<any[]>()).not.toContainEqual(expect.objectContaining({ product: expect.objectContaining({ id: product.id }) }));
     expect((await app.inject({ method: 'GET', url: '/workstreams' })).json<any[]>()).not.toContainEqual(expect.objectContaining({ id: archivedDelivery.id }));
     expect((await app.inject({ method: 'GET', url: `/products/${product.slug}` })).json()).toMatchObject({ product: { id: product.id, status: 'archived' } });
+  });
+
+  it('offers no stale next action after a delivery is integrated', async () => {
+    const product = (await app.inject({ method: 'POST', url: '/products', headers: { 'idempotency-key': 'completed-product' }, payload: { name: 'Completed Product' } })).json<any>();
+    const stream = (await app.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'completed-delivery' }, payload: { projectId: product.id, title: 'Completed delivery', intent: 'Deliver and integrate a finished result.', path: 'spec-epic' } })).json<any>();
+    await connection.db.insert(integrationDecisions).values({ id: 'integration_complete_projection', workstreamId: stream.id, actor: 'Michael', baseRevision: 'aaaaaaa', resultRevision: 'bbbbbbb', status: 'integrated' });
+
+    const lifecycle = (await app.inject({ method: 'GET', url: `/workstreams/${stream.id}/lifecycle` })).json<any>();
+    expect(lifecycle).toMatchObject({ currentStage: { id: 'integration', state: 'complete' }, recommendedAction: null, alternativeActions: [] });
   });
 
   it('keeps Brief proposals revision-bound and applies only an accepted revision', async () => {
