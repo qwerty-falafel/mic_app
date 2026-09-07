@@ -17,6 +17,7 @@ describe('durable workflow conversation contracts', () => {
     expect(awaitsInput('bmad-project-context', 'Applied this configuration:\n```js\nconst value = configured ?? fallback;\n```\nChanges are complete.', [])).toBe(false);
     expect(awaitsInput('bmad-prd', 'Draft saved.\nPlease choose one audience.', ['draft-prd.md'])).toBe(true);
     expect(awaitsInput('bmad-spec', '### Required human judgments\n\nPlease respond with a YAML-style list matching the schema.', [])).toBe(true);
+    expect(awaitsInput('bmad-spec', 'Both slices pass the release test. Let me know if this slicing meets your expectations.', [])).toBe(true);
     expect(awaitsInput('bmad-help', 'Would you like guidance?', [])).toBe(false);
   });
 

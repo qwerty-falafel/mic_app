@@ -31,7 +31,7 @@ export function awaitsInput(skill: string, content: string, artifactRefs: string
   const tail = content.slice(-3000).replace(/```[\s\S]*?```/g, '');
   const lines = tail.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const question = lines.some(line => /\?\s*$/.test(line));
-  const explicitRequest = lines.slice(-20).some(line => /^(?:please\s+)?(?:choose|select|reply|respond|provide|confirm|tell me|let me know)\b/i.test(line));
+  const explicitRequest = lines.slice(-20).some(line => /(?:^|[.!:]\s+)(?:please\s+)?(?:choose|select|reply|respond|provide|confirm|tell me|let me know)\b/i.test(line));
   const menu = lines.slice(-20).some(line => /^\[[a-z0-9]+\]\s+\S/i.test(line));
   return question || explicitRequest || menu;
 }

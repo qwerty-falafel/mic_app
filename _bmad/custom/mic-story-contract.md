@@ -19,6 +19,7 @@ Before proposing the slices, apply this release-value test:
 - Do not use `system`, `application`, `developer`, or a generic `user` as a substitute for the real beneficiary named or implied by the product context.
 - Do not claim that slices are vertical without explaining what usable outcome each slice independently releases.
 - Use literal ASCII capability identifiers such as `CAP-1`; do not substitute typographic hyphens.
+- Account for every governing capability across the proposed Stories. A cross-cutting constraint or regression guarantee may be covered by the Story it governs; it does not need to become a separate Story.
 
 The checkpoint meanings are operational:
 
