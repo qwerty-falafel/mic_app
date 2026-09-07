@@ -76,8 +76,11 @@ export class DeliveryProjectionService {
     else if (active) {
       currentId = stageForSkill(active.skill, active.action) ?? currentId;
       state = active.status === 'WAITING_FOR_INPUT' ? 'awaiting-decision' : active.status === 'BLOCKED' ? 'blocked' : active.status === 'PAUSED' || active.status === 'INTERRUPTED' || active.status === 'NEEDS_CLASSIFICATION' ? 'needs-attention' : 'active';
-      reason = state === 'active' ? `${active.skill} is ${active.status.toLowerCase().replaceAll('_', ' ')}; no response is required yet.` : `${active.skill} requires attention before it can continue.`;
-      attention = { type: 'session', id: active.id, label: active.skill, status: active.status };
+      const operationLabel = active.skill === 'bmad-spec' && active.action === 'create-stories' ? 'BMAD Story Breakdown' : active.skill;
+      reason = state === 'active' ? `${operationLabel} is ${active.status.toLowerCase().replaceAll('_', ' ')}; no response is required yet.`
+        : active.status === 'WAITING_FOR_INPUT' && active.action === 'create-stories' ? 'BMAD has proposed a Story plan and needs your checkpoint decisions before it can write stories.yaml.'
+        : `${operationLabel} requires attention before it can continue.`;
+      attention = { type: 'session', id: active.id, label: operationLabel, status: active.status };
     } else if (stream.path === 'spec-epic') {
       if (!spec) { currentId = 'specification'; reason = 'A valid SPEC.md has not been created yet.'; }
       else if (!accepted.has(spec.id)) { currentId = 'specification'; state = 'awaiting-decision'; reason = 'The latest valid specification needs acceptance or revision feedback.'; attention = { type: 'artifact', id: spec.id, label: spec.path }; }

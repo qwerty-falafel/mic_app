@@ -46,7 +46,18 @@ Open:
 
 For frontend development, leave the API running, run `npm run dev:web` in a third terminal, and open <http://127.0.0.1:5173/>. Vite proxies MIC API requests to port 3100.
 
-Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, OpenCode, and a project attached to a clean local Git repository. MIC defaults to `llama.cpp/gpt-oss-120b-F16`; keep `gpt-oss-120b-F16` loaded for normal MIC work. Set `MIC_MODEL` only for an intentional per-process override.
+Real planning and Build Auto require the llama.cpp router at `127.0.0.1:10000`, OpenCode, and a project attached to a clean local Git repository. Start the router in its own terminal before beginning model-backed work:
+
+```sh
+cd /home/michael/src/llama.cpp
+HIP_LAUNCH_BLOCKING=1 ./build-rocm/bin/llama-server \
+  --models-preset /srv/ai/llama-models.ini \
+  --models-max 1 \
+  --host 127.0.0.1 \
+  --port 10000
+```
+
+The router loads models on demand. MIC defaults to `llama.cpp/gpt-oss-120b-F16`; keep `gpt-oss-120b-F16` loaded for normal MIC work. Set `MIC_MODEL` only for an intentional per-process override.
 
 Stop the combined development server with `Ctrl-C`. The next `npm run dev` reuses the same local database.
 
