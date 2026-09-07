@@ -57,13 +57,19 @@ describe('product model and delivery lifecycle projection', () => {
     expect(secondGoal.status).toBe('active');
 
     const feature = (await app.inject({ method: 'POST', url: `/products/${product.id}/features`, payload: { name: 'Long-form TTS playback' } })).json<any>();
+    await app.inject({ method: 'POST', url: `/product-goals/${secondGoal.id}/features`, payload: { featureId: feature.id } });
+    const epic = (await app.inject({ method: 'POST', url: `/products/${product.id}/epics`, payload: { name: 'Long-form delivery', outcome: 'Continuous reading beyond one request.', featureIds: [feature.id] } })).json<any>();
     const delivery = (await app.inject({ method: 'POST', url: '/workstreams', headers: { 'idempotency-key': 'tts-delivery' }, payload: { projectId: product.id, title: 'Build reliable playback', intent: 'Stream long text through bounded chunks.', path: 'spec-epic' } })).json<any>();
     await app.inject({ method: 'POST', url: `/features/${feature.id}/deliveries`, payload: { workstreamId: delivery.id } });
 
     const overview = (await app.inject({ method: 'GET', url: `/products/${product.slug}` })).json<any>();
     expect(overview.goals).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstGoal.id, status: 'abandoned' }), expect.objectContaining({ id: secondGoal.id, status: 'active' })]));
     expect(overview.features).toEqual([expect.objectContaining({ id: feature.id, status: 'active' })]);
+    expect(overview.epics).toEqual([expect.objectContaining({ id: epic.id, status: 'proposed' })]);
     expect(overview.deliveries).toEqual([expect.objectContaining({ id: delivery.id, classification: 'epic', intent: 'Stream long text through bounded chunks.' })]);
+    const roadmap = (await app.inject({ method: 'GET', url: `/products/${product.slug}/roadmap` })).json<any>();
+    expect(roadmap.goalFeatureLinks).toContainEqual(expect.objectContaining({ goalId: secondGoal.id, featureId: feature.id }));
+    expect(roadmap.epicFeatureLinks).toContainEqual(expect.objectContaining({ epicId: epic.id, featureId: feature.id }));
 
     const initial = (await app.inject({ method: 'GET', url: `/workstreams/${delivery.id}/lifecycle` })).json<any>();
     expect(initial).toMatchObject({ delivery: { classification: 'epic', brief: 'Stream long text through bounded chunks.' }, currentStage: { id: 'specification', state: 'ready' }, recommendedAction: { id: 'create-specification' } });

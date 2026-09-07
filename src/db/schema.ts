@@ -16,6 +16,18 @@ export const features = pgTable('features', {
   id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), slug: text('slug').notNull(), name: text('name').notNull(), description: text('description').notNull().default(''), status: text('status').notNull().default('active'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [uniqueIndex('features_project_slug_idx').on(table.projectId, table.slug), index('features_project_status_idx').on(table.projectId, table.status)]);
 
+export const productEpics = pgTable('product_epics', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), slug: text('slug').notNull(), name: text('name').notNull(), outcome: text('outcome').notNull().default(''), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('product_epics_project_slug_idx').on(table.projectId, table.slug), index('product_epics_project_status_idx').on(table.projectId, table.status)]);
+
+export const goalFeatures = pgTable('goal_features', {
+  goalId: text('goal_id').notNull().references(() => productGoals.id, { onDelete: 'cascade' }), featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }), createdAt: createdAt(),
+}, table => [uniqueIndex('goal_feature_idx').on(table.goalId, table.featureId)]);
+
+export const epicFeatures = pgTable('epic_features', {
+  epicId: text('epic_id').notNull().references(() => productEpics.id, { onDelete: 'cascade' }), featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }), createdAt: createdAt(),
+}, table => [uniqueIndex('epic_feature_idx').on(table.epicId, table.featureId), index('epic_feature_feature_idx').on(table.featureId)]);
+
 export const repositories = pgTable('repositories', {
   id: text('id').primaryKey(), commandKey: text('command_key').notNull().unique(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('primary'), path: text('path').notNull(), baseBranch: text('base_branch').notNull().default('main'), createdAt: createdAt(),
@@ -126,7 +138,7 @@ export const integrationDecisions = pgTable('integration_decisions', {
 }, table => [index('integration_decision_workstream_idx').on(table.workstreamId, table.createdAt)]);
 
 export const productBacklogItems = pgTable('product_backlog_items', {
-  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), featureId: text('feature_id').references(() => features.id, { onDelete: 'set null' }), workstreamId: text('workstream_id').references(() => workstreams.id, { onDelete: 'set null' }), storyUnitId: text('story_unit_id').references(() => storyUnits.id, { onDelete: 'set null' }),
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), featureId: text('feature_id').references(() => features.id, { onDelete: 'set null' }), epicId: text('epic_id').references(() => productEpics.id, { onDelete: 'set null' }), workstreamId: text('workstream_id').references(() => workstreams.id, { onDelete: 'set null' }), storyUnitId: text('story_unit_id').references(() => storyUnits.id, { onDelete: 'set null' }),
   kind: text('kind').notNull().default('story'), title: text('title').notNull(), description: text('description').notNull().default(''), status: text('status').notNull().default('proposed'), order: integer('order').notNull().default(0), acceptanceCriteria: jsonb('acceptance_criteria').notNull().default([]), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [index('product_backlog_project_order_idx').on(table.projectId, table.order), uniqueIndex('product_backlog_story_unit_idx').on(table.storyUnitId)]);
 

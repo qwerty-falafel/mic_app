@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, count, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { featureDeliveryCases, features, productGoals, projects, repositories, scrumSprints, workstreams } from '../db/schema.js';
+import { epicFeatures, featureDeliveryCases, features, goalFeatures, productEpics, productGoals, projects, repositories, scrumSprints, workstreams } from '../db/schema.js';
 import { durableSlug } from './slugs.js';
 
 export class ProductService {
@@ -70,6 +70,42 @@ export class ProductService {
     const identity = randomUUID();
     const [feature] = await this.db.insert(features).values({ id: `feature_${identity}`, projectId, slug: durableSlug(input.name, identity), name: input.name, description: input.description ?? '', status: input.status ?? 'active' }).returning();
     return feature;
+  }
+
+  epics(projectId: string) { return this.db.select().from(productEpics).where(eq(productEpics.projectId, projectId)).orderBy(asc(productEpics.name)); }
+
+  async createEpic(projectId: string, input: { name: string; outcome?: string; status?: 'proposed' | 'active' | 'achieved' | 'retired'; featureIds?: string[] }) {
+    return this.db.transaction(async tx => {
+      const identity = randomUUID();
+      const [epic] = await tx.insert(productEpics).values({ id: `epic_${identity}`, projectId, slug: durableSlug(input.name, identity), name: input.name, outcome: input.outcome ?? '', status: input.status ?? 'proposed' }).returning();
+      for (const featureId of input.featureIds ?? []) await tx.insert(epicFeatures).values({ epicId: epic!.id, featureId }).onConflictDoNothing();
+      return epic!;
+    });
+  }
+
+  async linkGoalFeature(goalId: string, featureId: string) {
+    const [[goal], [feature]] = await Promise.all([this.db.select().from(productGoals).where(eq(productGoals.id, goalId)), this.db.select().from(features).where(eq(features.id, featureId))]);
+    if (!goal || !feature || goal.projectId !== feature.projectId) throw new Error('Goal and Feature must belong to the same Product');
+    const [row] = await this.db.insert(goalFeatures).values({ goalId, featureId }).onConflictDoNothing().returning();
+    return row ?? { goalId, featureId };
+  }
+
+  async linkEpicFeature(epicId: string, featureId: string) {
+    const [[epic], [feature]] = await Promise.all([this.db.select().from(productEpics).where(eq(productEpics.id, epicId)), this.db.select().from(features).where(eq(features.id, featureId))]);
+    if (!epic || !feature || epic.projectId !== feature.projectId) throw new Error('Epic and Feature must belong to the same Product');
+    const [row] = await this.db.insert(epicFeatures).values({ epicId, featureId }).onConflictDoNothing().returning();
+    return row ?? { epicId, featureId };
+  }
+
+  async updateFeature(featureId: string, input: { name?: string; description?: string; status?: string }) { const [row] = await this.db.update(features).set({ ...input, updatedAt: new Date() }).where(eq(features.id, featureId)).returning(); if (!row) throw new Error('Feature not found'); return row; }
+  async updateEpic(epicId: string, input: { name?: string; outcome?: string; status?: string }) { const [row] = await this.db.update(productEpics).set({ ...input, updatedAt: new Date() }).where(eq(productEpics.id, epicId)).returning(); if (!row) throw new Error('Epic not found'); return row; }
+
+  async roadmap(projectId: string) {
+    const [goals, productFeatures, epics, goalLinks, epicLinks] = await Promise.all([
+      this.goals(projectId), this.features(projectId), this.epics(projectId),
+      this.db.select().from(goalFeatures), this.db.select().from(epicFeatures),
+    ]);
+    return { goals, features: productFeatures, epics, goalFeatureLinks: goalLinks.filter(link => goals.some(goal => goal.id === link.goalId)), epicFeatureLinks: epicLinks.filter(link => epics.some(epic => epic.id === link.epicId)) };
   }
 
   async linkFeature(featureId: string, workstreamId: string) {
