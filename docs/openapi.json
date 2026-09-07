@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "MIC Product Development API",
-    "version": "0.14.0",
-    "description": "Local AI-guided Product development control plane with Product direction, Brief proposals, Scrum delivery, durable workflows, immutable artifacts and explicit integration."
+    "version": "0.15.0",
+    "description": "Local Scrum product-development control plane using Jira interaction patterns and BMAD for adaptive software planning, bounded Build, and technical review; MIC owns durable orchestration and human approval of exact revisions."
   },
   "servers": [
     {
@@ -2217,6 +2217,136 @@
           },
           "409": {
             "description": "State conflict"
+          }
+        }
+      }
+    },
+    "/system/responsibilities": {
+      "get": {
+        "summary": "Describe runtime ownership and authority boundaries",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/product-epics/{id}/delivery-recommendation": {
+      "get": {
+        "summary": "Explain the recommended installed BMAD route for an Epic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repositoryId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/product-epics/{id}/dispatch": {
+      "post": {
+        "summary": "Create the BMAD Delivery Case for an Epic without starting Build",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Delivery Case created"
+          },
+          "409": {
+            "description": "BMAD route constraint"
+          }
+        }
+      }
+    },
+    "/product-backlog/{id}/delivery-recommendation": {
+      "get": {
+        "summary": "Explain the recommended installed BMAD route for a concrete PBI",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repositoryId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/product-backlog/{id}/dispatch": {
+      "post": {
+        "summary": "Prepare one bounded direct BMAD Build Delivery Case",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Delivery Case created"
+          },
+          "409": {
+            "description": "PBI requires Epic planning or is BMAD-derived"
+          }
+        }
+      }
+    },
+    "/product-backlog/{id}/trace": {
+      "get": {
+        "summary": "Trace a PBI from source Brief through BMAD artifacts, Scrum selection, sessions, and Increment evidence",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cross-model provenance graph"
           }
         }
       }

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -17,7 +18,7 @@ export const features = pgTable('features', {
 }, table => [uniqueIndex('features_project_slug_idx').on(table.projectId, table.slug), index('features_project_status_idx').on(table.projectId, table.status)]);
 
 export const productEpics = pgTable('product_epics', {
-  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), workstreamId: text('workstream_id'), slug: text('slug').notNull(), name: text('name').notNull(), outcome: text('outcome').notNull().default(''), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), workstreamId: text('workstream_id'), sourceBriefId: text('source_brief_id'), sourceProposalId: text('source_proposal_id'), deliveryPath: text('delivery_path'), deliveryRationale: text('delivery_rationale').notNull().default(''), slug: text('slug').notNull(), name: text('name').notNull(), outcome: text('outcome').notNull().default(''), status: text('status').notNull().default('proposed'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [uniqueIndex('product_epics_project_slug_idx').on(table.projectId, table.slug), index('product_epics_project_status_idx').on(table.projectId, table.status), uniqueIndex('product_epics_workstream_idx').on(table.workstreamId)]);
 
 export const goalFeatures = pgTable('goal_features', {
@@ -121,9 +122,9 @@ export const workflowDefinitions = pgTable('workflow_definitions', {
 }, table => [uniqueIndex('workflow_definition_install_skill_action_idx').on(table.repositoryId, table.fingerprint, table.skill, table.action)]);
 
 export const workflowSessions = pgTable('workflow_sessions', {
-  id: text('id').primaryKey(), workstreamId: text('workstream_id').notNull().references(() => workstreams.id, { onDelete: 'cascade' }), definitionId: text('definition_id').references(() => workflowDefinitions.id, { onDelete: 'set null' }), skill: text('skill').notNull(), action: text('action'), args: jsonb('args').notNull().default({}), prompt: text('prompt').notNull(), status: text('status').notNull().default('QUEUED'), providerSessionId: text('provider_session_id'), rawState: jsonb('raw_state').notNull().default({}), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  id: text('id').primaryKey(), workstreamId: text('workstream_id').notNull().references(() => workstreams.id, { onDelete: 'cascade' }), definitionId: text('definition_id').references(() => workflowDefinitions.id, { onDelete: 'set null' }), storyUnitId: text('story_unit_id'), skill: text('skill').notNull(), action: text('action'), args: jsonb('args').notNull().default({}), prompt: text('prompt').notNull(), status: text('status').notNull().default('QUEUED'), providerSessionId: text('provider_session_id'), rawState: jsonb('raw_state').notNull().default({}), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp('finished_at', { withTimezone: true }),
-}, table => [index('workflow_sessions_workstream_status_idx').on(table.workstreamId, table.status)]);
+}, table => [index('workflow_sessions_workstream_status_idx').on(table.workstreamId, table.status), uniqueIndex('workflow_sessions_active_story_idx').on(table.storyUnitId).where(sql`${table.storyUnitId} is not null and ${table.status} in ('QUEUED','RESOURCE_WAITING','RUNNING','WAITING_FOR_INPUT','BLOCKED','PAUSED','INTERRUPTED','NEEDS_CLASSIFICATION')`)]);
 
 export const conversationTurns = pgTable('conversation_turns', {
   id: text('id').primaryKey(), sessionId: text('session_id').notNull().references(() => workflowSessions.id, { onDelete: 'cascade' }), sequence: integer('sequence').notNull(), role: text('role').notNull(), content: text('content').notNull(), commandKey: text('command_key'), metadata: jsonb('metadata').notNull().default({}), createdAt: createdAt(),
@@ -151,7 +152,7 @@ export const integrationDecisions = pgTable('integration_decisions', {
 
 export const productBacklogItems = pgTable('product_backlog_items', {
   id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), featureId: text('feature_id').references(() => features.id, { onDelete: 'set null' }), epicId: text('epic_id').references(() => productEpics.id, { onDelete: 'set null' }), workstreamId: text('workstream_id').references(() => workstreams.id, { onDelete: 'set null' }), storyUnitId: text('story_unit_id').references(() => storyUnits.id, { onDelete: 'set null' }),
-  reference: text('reference'), kind: text('kind').notNull().default('story'), title: text('title').notNull(), value: text('value').notNull().default(''), description: text('description').notNull().default(''), status: text('status').notNull().default('proposed'), order: integer('order').notNull().default(0), acceptanceCriteria: jsonb('acceptance_criteria').notNull().default([]), acceptanceSignal: text('acceptance_signal').notNull().default(''), dependencies: jsonb('dependencies').notNull().default([]), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  sourceProposalId: text('source_proposal_id').references(() => productProposals.id, { onDelete: 'set null' }), sourceArtifactId: text('source_artifact_id'), sourceArtifactHash: text('source_artifact_hash'), sourceStoryKey: text('source_story_key'), deliveryPath: text('delivery_path'), deliveryRationale: text('delivery_rationale').notNull().default(''), reference: text('reference'), kind: text('kind').notNull().default('story'), title: text('title').notNull(), value: text('value').notNull().default(''), description: text('description').notNull().default(''), status: text('status').notNull().default('proposed'), order: integer('order').notNull().default(0), acceptanceCriteria: jsonb('acceptance_criteria').notNull().default([]), acceptanceSignal: text('acceptance_signal').notNull().default(''), dependencies: jsonb('dependencies').notNull().default([]), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [index('product_backlog_project_order_idx').on(table.projectId, table.order), uniqueIndex('product_backlog_story_unit_idx').on(table.storyUnitId), uniqueIndex('product_backlog_reference_idx').on(table.reference)]);
 
 export const scrumSprints = pgTable('scrum_sprints', {

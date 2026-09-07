@@ -25,6 +25,9 @@ import { ProductService } from './services/products.js';
 import { DeliveryProjectionService } from './services/delivery-projection.js';
 import { ScrumService } from './services/scrum.js';
 import { GptOssProposalAnalyzer, ProductProposalService, type ProductProposalAnalyzer } from './services/product-proposals.js';
+import { BmadRoutingService } from './services/bmad-routing.js';
+import { runtimeResponsibilities } from './services/runtime-responsibilities.js';
+import { ProductTraceService } from './services/product-trace.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().trim().min(1), purpose: z.string().trim().optional(), status: z.enum(['active', 'archived']).optional(), definitionOfDone: z.string().trim().min(1).optional() });
@@ -55,6 +58,8 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   const delivery = new DeliveryProjectionService(db);
   const scrum = new ScrumService(db);
   const proposals = new ProductProposalService(db, proposalAnalyzer ?? new GptOssProposalAnalyzer());
+  const routing = new BmadRoutingService(db);
+  const trace = new ProductTraceService(db);
   void sessions.recoverActive();
   app.addHook('onClose', async () => { await sessions.interruptActive(); });
   const key = (request: { headers: Record<string, unknown> }) => typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : randomUUID();
@@ -66,9 +71,11 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
     if (error instanceof Error && (error.message.startsWith('Delivery state changed') || error.message.startsWith('Action is not available') || error.message.startsWith('Action prerequisites'))) return reply.code(409).send({ error: 'stale_or_ineligible_action', message: error.message });
     if (error instanceof Error && (/Sprint|Product Backlog Item|Definition of Done|same Product/.test(error.message))) return reply.code(409).send({ error: 'scrum_constraint', message: error.message });
     if (error instanceof Error && error.message.includes('proposal revision has already been decided')) return reply.code(409).send({ error: 'proposal_already_decided', message: error.message });
+    if (error instanceof Error && (/BMAD|Story|stories\.yaml|Epic cannot|human approval|delivery route|Delivery Case/.test(error.message))) return reply.code(409).send({ error: 'delivery_constraint', message: error.message });
     return reply.code(500).send({ error: 'internal_error', message: error instanceof Error ? error.message : 'Unexpected MIC error' });
   });
   app.get('/health', async () => ({ status: 'ok' }));
+  app.get('/system/responsibilities', async () => runtimeResponsibilities);
   app.get('/system/status', async () => {
     const [memory, [projectCount], [workItemCount], [activeRuns], [activeSessions], [pendingOutbox]] = await Promise.all([
       localMemory(), db.select({ value: count() }).from(projects), db.select({ value: count() }).from(workItems), db.select({ value: count() }).from(runs).where(eq(runs.status, 'RUNNING')), db.select({ value: count() }).from(workflowSessions).where(eq(workflowSessions.status, 'RUNNING')), db.select({ value: count() }).from(outboxEvents).where(isNull(outboxEvents.deliveredAt)),
@@ -80,7 +87,9 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/projects', async (request, reply) => reply.code(201).send(await kernel.createProject(projectInput.parse(request.body), key(request))));
   app.post('/projects/:id/repositories', async (request, reply) => {
     const { id: projectId } = z.object({ id }).parse(request.params);
-    return reply.code(201).send(await kernel.createRepository({ projectId, ...repositoryInput.parse(request.body) }, key(request)));
+    const repository = await kernel.createRepository({ projectId, ...repositoryInput.parse(request.body) }, key(request));
+    await catalog.sync(repository.id);
+    return reply.code(201).send(repository);
   });
   app.post('/work-items', async (request, reply) => reply.code(201).send(await kernel.createWorkItem(workItemInput.parse(request.body), key(request))));
   app.post('/runs', async (request, reply) => reply.code(201).send(await kernel.createRun(runInput.parse(request.body), key(request))));
@@ -119,12 +128,17 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/products/:id/briefs', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ title: z.string().trim().min(1), content: z.string().trim().min(1) }).parse(request.body); return reply.code(201).send(await proposals.createBrief(projectId, body.title, body.content)); });
   app.post('/briefs/:id/analyse', async request => { const { id: briefId } = z.object({ id }).parse(request.params); const { feedback } = z.object({ feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.analyse(briefId, feedback); });
   app.post('/product-proposals/:id/decisions', async request => { const { id: proposalId } = z.object({ id }).parse(request.params); const body = z.object({ kind: z.enum(['accepted', 'revision-requested', 'rejected']), actor: z.string().trim().min(1), feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.decide(proposalId, body.kind, body.actor, body.feedback); });
+  app.get('/product-epics/:id/delivery-recommendation', async request => { const { id: epicId } = z.object({ id }).parse(request.params); const { repositoryId } = z.object({ repositoryId: id.optional() }).parse(request.query); return routing.describeForEpic(epicId, repositoryId); });
+  app.post('/product-epics/:id/dispatch', async (request, reply) => { const { id: epicId } = z.object({ id }).parse(request.params); const body = z.object({ repositoryId: id, path: z.enum(['spec-epic', 'project']).optional(), actor: id.optional() }).parse(request.body); return reply.code(201).send(await routing.dispatchEpic(epicId, body.repositoryId, body.path, body.actor)); });
   app.get('/product-backlog', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listBacklog(projectId); });
   app.post('/product-backlog', async (request, reply) => { const body = z.object({ projectId: id, featureId: id.optional(), epicId: id.optional(), workstreamId: id.optional(), storyUnitId: id.optional(), kind: z.enum(['story', 'defect', 'discovery']), title: z.string().trim().min(1), value: z.string().trim().min(1), description: z.string().optional(), order: z.number().int().optional(), acceptanceCriteria: z.array(z.string().trim().min(1)).optional(), acceptanceSignal: z.string().optional(), dependencies: z.array(z.string()).optional() }).parse(request.body); return reply.code(201).send(await scrum.createBacklogItem(body)); });
   app.get('/product-backlog/:reference', async (request, reply) => { const { reference } = z.object({ reference: id }).parse(request.params); const row = await scrum.getBacklogItem(reference); return row ?? reply.code(404).send({ error: 'not_found' }); });
+  app.get('/product-backlog/:id/trace', async request => { const { id: itemId } = z.object({ id }).parse(request.params); return trace.backlogItem(itemId); });
   app.patch('/product-backlog/:id', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const body = z.object({ featureId: id.nullable().optional(), epicId: id.nullable().optional(), title: z.string().trim().min(1).optional(), value: z.string().trim().min(1).optional(), description: z.string().optional(), acceptanceCriteria: z.array(z.string().trim().min(1)).optional(), acceptanceSignal: z.string().optional(), dependencies: z.array(z.string()).optional() }).parse(request.body); return scrum.updateBacklogItem(itemId, body); });
   app.put('/products/:id/backlog-order', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const { itemIds } = z.object({ itemIds: z.array(id) }).parse(request.body); return scrum.reorderBacklog(projectId, itemIds); });
   app.post('/product-backlog/:id/status', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const { status } = z.object({ status: z.enum(['proposed', 'ready', 'in-progress', 'review', 'blocked', 'done', 'removed']) }).parse(request.body); return scrum.updateBacklogStatus(itemId, status); });
+  app.get('/product-backlog/:id/delivery-recommendation', async request => { const { id: itemId } = z.object({ id }).parse(request.params); const { repositoryId } = z.object({ repositoryId: id.optional() }).parse(request.query); return routing.describeForItem(itemId, repositoryId); });
+  app.post('/product-backlog/:id/dispatch', async (request, reply) => { const { id: itemId } = z.object({ id }).parse(request.params); const body = z.object({ repositoryId: id, actor: id.optional() }).parse(request.body); return reply.code(201).send(await routing.prepareItemBuild(itemId, body.repositoryId, body.actor)); });
   app.get('/scrum-sprints', async request => { const { projectId } = z.object({ projectId: id }).parse(request.query); return scrum.listSprints(projectId); });
   app.post('/scrum-sprints', async (request, reply) => { const body = z.object({ projectId: id, number: z.number().int().positive(), goal: z.string().trim().min(1), startsAt: z.coerce.date(), endsAt: z.coerce.date() }).parse(request.body); return reply.code(201).send(await scrum.createSprint(body)); });
   app.post('/scrum-sprints/:id/items', async request => { const { id: sprintId } = z.object({ id }).parse(request.params); const { backlogItemId } = z.object({ backlogItemId: id }).parse(request.body); return scrum.selectItem(sprintId, backlogItemId); });
@@ -157,7 +171,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/workstreams/:id/actions/:actionId/validate', async request => { const { id: workstreamId, actionId } = z.object({ id, actionId: id }).parse(request.params); const { actionToken } = z.object({ actionToken: id }).parse(request.body); return delivery.validate(workstreamId, actionId, actionToken); });
   app.post('/workstreams/:id/path', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); const body = z.object({ path: z.enum(['direct', 'spec-epic', 'project', 'specialist']), actor: id.optional() }).parse(request.body); return streams.selectPath(workstreamId, body.path, body.actor); });
   app.get('/workstreams/:id/operations', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return streams.operations(workstreamId); });
-  app.post('/workflow-sessions', async (request, reply) => { const body = z.object({ workstreamId: id, skill: id, action: id.optional(), args: z.record(z.string(), z.unknown()).optional(), prompt: z.string().min(1) }).parse(request.body); return reply.code(202).send(await sessions.start(body)); });
+  app.post('/workflow-sessions', async (request, reply) => { const body = z.object({ workstreamId: id, storyUnitId: id.optional(), skill: id, action: id.optional(), args: z.record(z.string(), z.unknown()).optional(), prompt: z.string().min(1) }).parse(request.body); return reply.code(202).send(await sessions.start(body)); });
   app.get('/workflow-sessions', async request => { const query = z.object({ workstreamId: id.optional() }).parse(request.query); return sessions.list(query.workstreamId); });
   app.get('/workflow-sessions/:id', async (request, reply) => { const { id: sessionId } = z.object({ id }).parse(request.params); const [session] = await db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); return session ? reply.send({ ...session, turns: await sessions.turns(sessionId) }) : reply.code(404).send({ error: 'not_found' }); });
   app.post('/workflow-sessions/:id/respond', async request => { const { id: sessionId } = z.object({ id }).parse(request.params); const body = z.object({ content: z.string().trim().min(1), actor: id.optional() }).parse(request.body); return sessions.respond(sessionId, body.content, body.actor, key(request)); });

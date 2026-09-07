@@ -54,10 +54,10 @@ Stop the combined development server with `Ctrl-C`. The next `npm run dev` reuse
 
 1. Open **Products** to resume an enduring Product or create one from its name, purpose, and proposed Product Goal. A repository is optional at this stage.
 2. Use **Roadmap** to relate the current Product Goal to persistent Features and temporary Epics. It is an outcome hierarchy and does not invent dates.
-3. Use **Briefs** to ask GPT-OSS 120B for a reasoned proposal. Request revisions or reject it; only accepting the exact proposal revision creates proposed Product Backlog Items.
-4. Order and refine Stories, Defects, and Discoveries in **Backlog**. Use **Board** for their flow status and **Sprints** for explicit timeboxed selection around one Sprint Goal.
-5. Configure Git repositories and create a Delivery Case from **Product settings**. MIC then recommends a development path while allowing an explicit override.
-6. Follow the durable delivery conversation. A workflow needs an answer only when it says **Waiting for input** or **Blocked**. Review an immutable artifact revision before accepting it or requesting changes.
+3. Use **Briefs** to ask GPT-OSS 120B for a reasoned proposal and an explained BMAD planning-depth recommendation. Request revisions or reject it; accepting the exact proposal revision creates proposed Product records but does not approve BMAD planning or start Build.
+4. Order and refine Stories, Defects, and Discoveries in **Backlog**. Use **Board** for their independent flow status and **Sprints** for explicit timeboxed selection around one Sprint Goal. Neither action advances a BMAD gate.
+5. Attach a Git repository in **Product settings**, then prepare an Epic or bounded PBI from its Product view. MIC checks the repository's installed BMAD catalog and creates the recommended Delivery Case. A spec-backed Epic must produce an accepted `SPEC.md` and an accepted `stories.yaml`; MIC then synchronizes those Stories into the same Product Backlog.
+6. Follow the durable BMAD delivery conversation. A workflow needs an answer only when it says **Waiting for input** or **Blocked**. BMAD technical review produces findings and evidence; only your explicit MIC decision can accept an immutable artifact revision.
 7. Inspect usable Increments in **Releases**, consequential events in **Activity**, and make final integration an explicit decision.
 
 Requesting an artifact revision records feedback against the exact revision and returns the work to the artifact's owning workflow. It does not approve the document. Starting a new reading or workflow session must not silently reuse stale output from an earlier session.
