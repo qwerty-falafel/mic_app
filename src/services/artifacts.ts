@@ -24,6 +24,12 @@ async function walk(root: string, dir: string): Promise<string[]> {
   } catch { return []; }
 }
 
+export function selectSessionArtifactPaths(allPaths: string[], artifactRefs: unknown) {
+  if (!Array.isArray(artifactRefs)) return allPaths;
+  const selected = new Set(artifactRefs.filter((value): value is string => typeof value === 'string').map(value => value.replace(/^\.\//, '')));
+  return allPaths.filter(path => selected.has(path));
+}
+
 export function parseArtifact(path: string, content: string) {
   let frontmatter: Record<string, unknown> = {}, body = content;
   const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
@@ -44,13 +50,15 @@ export class ArtifactService {
   async index(workstreamId: string, sessionId?: string) {
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
     if (!stream?.workspacePath) throw new Error('Workstream workspace is unavailable');
-    const root = resolve(stream.workspacePath), paths = (await walk(root, resolve(root, '_bmad-output'))).sort((left, right) => {
+    const root = resolve(stream.workspacePath), allPaths = (await walk(root, resolve(root, '_bmad-output'))).sort((left, right) => {
       const leftMemlog = basename(left).toLowerCase() === '.memlog.md';
       const rightMemlog = basename(right).toLowerCase() === '.memlog.md';
       return Number(rightMemlog) - Number(leftMemlog) || left.localeCompare(right);
     });
+    const [session] = sessionId ? await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)).limit(1) : [];
+    const paths = session ? selectSessionArtifactPaths(allPaths, (session.rawState as any)?.artifactRefs) : allPaths;
     const revision = (await exec('git', ['-C', root, 'rev-parse', 'HEAD'])).stdout.trim();
-    const pathSet = new Set(paths);
+    const pathSet = new Set(allPaths);
     const created: (typeof artifactRevisions.$inferSelect)[] = [];
     for (const path of paths) {
       const content = await readFile(resolve(root, path), 'utf8');
@@ -84,9 +92,10 @@ export class ArtifactService {
       }
       let storyAnalysis: ReturnType<typeof analyseStoryInventory> | undefined;
       if (parsed.type === 'story-inventory') {
-        const spec = created.find(row => row.path === `${dirname(path)}/SPEC.md`);
-        if (!spec) issues.push('stories.yaml requires its governing sibling SPEC.md');
-        storyAnalysis = analyseStoryInventory(content, spec?.content ?? '');
+        const specPath = `${dirname(path)}/SPEC.md`;
+        if (!pathSet.has(specPath)) issues.push('stories.yaml requires its governing sibling SPEC.md');
+        const specContent = pathSet.has(specPath) ? await readFile(resolve(root, specPath), 'utf8') : '';
+        storyAnalysis = analyseStoryInventory(content, specContent);
         issues.push(...storyAnalysis.issues);
       }
       const [row] = await this.db.insert(artifactRevisions).values({ id: `artifact_${randomUUID()}`, workstreamId, sessionId, path, type: parsed.type, status: issues.length ? 'quarantined' : parsed.status, contentHash: hash, content, repositoryRevision: revision, metadata: { ...parsed, valid: issues.length === 0, issues, ...(storyAnalysis ? { storyOutcomes: storyAnalysis.stories, warnings: storyAnalysis.warnings } : {}) } }).returning();
