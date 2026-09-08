@@ -15,11 +15,15 @@ export type ProposalShape = {
 };
 export interface ProductProposalAnalyzer { analyse(context: { product: any; brief: any; previous?: any; feedback?: string }): Promise<ProposalShape>; }
 
+export function llamaCppModelId(model: string) {
+  return model.startsWith('llama.cpp/') ? model.slice('llama.cpp/'.length) : model;
+}
+
 export class GptOssProposalAnalyzer implements ProductProposalAnalyzer {
   constructor(private readonly endpoint = process.env.MIC_MODEL_ROUTER_URL ?? 'http://127.0.0.1:10000/v1/chat/completions', private readonly model = process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16') {}
   async analyse(context: { product: any; brief: any; previous?: any; feedback?: string }) {
     const instruction = `Return JSON only. Act as a product discovery partner. Turn the Brief into a conservative proposal with this shape: {"rationale":"", "features":[{"name":"","description":""}], "epics":[{"name":"","outcome":"","featureNames":[]}], "items":[{"kind":"story|defect|discovery","title":"","value":"","acceptanceCriteria":[],"featureName":"","epicName":""}], "dependencies":[], "uncertainties":[], "deliveryRecommendation":{"path":"direct|spec-epic|project","rationale":"","evidence":[],"nextArtifact":""}}. Recommend direct only for one already-bounded implementation unit, spec-epic for coherent work needing SPEC.md and stories.yaml, and project only when multiple Epics justify BMAD product/UX/architecture/readiness work. A Story delivers user value; a Defect removes a barrier to intended value; a Discovery closes a consequential understanding gap. Do not create implementation tasks and do not claim BMAD readiness. Product: ${JSON.stringify(context.product)}. Brief: ${JSON.stringify(context.brief)}. Previous proposal: ${JSON.stringify(context.previous ?? null)}. Revision feedback: ${context.feedback ?? 'none'}.`;
-    const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: this.model, messages: [{ role: 'user', content: instruction }], temperature: 0.2 }), signal: AbortSignal.timeout(120_000) });
+    const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: llamaCppModelId(this.model), messages: [{ role: 'user', content: instruction }], temperature: 0.2 }), signal: AbortSignal.timeout(120_000) });
     if (!response.ok) throw new Error(`Proposal model failed (${response.status})`);
     const body: any = await response.json();
     const content = body.choices?.[0]?.message?.content ?? body.output_text;
