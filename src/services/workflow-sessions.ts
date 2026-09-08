@@ -166,6 +166,13 @@ export class WorkflowSessionService {
 
   private async verifyBuild(workspace: string) {
     const checks: Array<{ command: string; passed: boolean; output: string }> = [];
+    try {
+      await access(resolve(workspace, 'package-lock.json'));
+      const value = await exec('npm', ['ci'], { cwd: workspace, timeout: 300_000 });
+      checks.push({ command: 'npm ci', passed: true, output: `${value.stdout}${value.stderr}`.trim().slice(-8000) });
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') checks.push({ command: 'npm ci', passed: false, output: `${error?.stdout ?? ''}${error?.stderr ?? ''}${error?.message ?? error}`.trim().slice(-8000) });
+    }
     let scripts: string[][];
     try { scripts = nodeVerificationScripts(await readFile(resolve(workspace, 'package.json'), 'utf8')); }
     catch (error) { return { passed: false, checks: [{ command: 'parse package.json', passed: false, output: String(error) }] }; }
