@@ -44,6 +44,11 @@ export function parseArtifact(path: string, content: string) {
   return { type, status, frontmatter, assumptions, questions, conflicts };
 }
 
+export function memlogHistory(content: string) {
+  const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
+  return (match ? content.slice(match[0].length) : content).trimEnd();
+}
+
 export class ArtifactService {
   constructor(private readonly db: Database) {}
 
@@ -88,7 +93,9 @@ export class ArtifactService {
       }
       if (parsed.type === 'memlog') {
         const [prior] = await this.db.select().from(artifactRevisions).where(and(eq(artifactRevisions.workstreamId, workstreamId), eq(artifactRevisions.path, path), or(isNull(artifactRevisions.status), ne(artifactRevisions.status, 'quarantined')))).orderBy(desc(artifactRevisions.createdAt)).limit(1);
-        if (prior && !content.startsWith(prior.content)) issues.push('Historical memlog content was modified; revisions must append');
+        const priorHistory = prior ? memlogHistory(prior.content) : '';
+        const nextHistory = memlogHistory(content);
+        if (priorHistory && nextHistory !== priorHistory && !nextHistory.startsWith(`${priorHistory}\n`)) issues.push('Historical memlog content was modified; revisions must append');
       }
       let storyAnalysis: ReturnType<typeof analyseStoryInventory> | undefined;
       if (parsed.type === 'story-inventory') {
