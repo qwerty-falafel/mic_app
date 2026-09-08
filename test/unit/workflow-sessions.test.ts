@@ -48,6 +48,7 @@ describe('durable workflow conversation contracts', () => {
 
   it('accepts revision feedback while an ambiguous completion awaits classification', () => {
     expect(canReviseSession('NEEDS_CLASSIFICATION')).toBe(true);
+    expect(canReviseSession('PAUSED')).toBe(true);
     expect(canReviseSession('RUNNING')).toBe(false);
   });
 

@@ -60,7 +60,7 @@ export function needsHumanClassification(skill: string, status: WorkflowRunResul
 }
 
 export function canReviseSession(status: string) {
-  return ['WAITING_FOR_INPUT', 'BLOCKED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION', 'FINISHED', 'FAILED'].includes(status);
+  return ['WAITING_FOR_INPUT', 'BLOCKED', 'PAUSED', 'INTERRUPTED', 'NEEDS_CLASSIFICATION', 'FINISHED', 'FAILED'].includes(status);
 }
 
 export function nodeVerificationScripts(packageText: string) {

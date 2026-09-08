@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BmadRunnerAdapter } from '../../src/adapters/bmad-runner.js';
-import { csvRows } from '../../src/services/bmad-catalog.js';
+import { csvRows, includeRuntimeSkills } from '../../src/services/bmad-catalog.js';
 
 const exec = promisify(execFile);
 const cleanup: string[] = [];
@@ -19,6 +19,12 @@ describe('BMAD catalog and generic runner', () => {
       { module: 'BMM', skill: 'bmad-spec', description: 'Create, update, validate', action: 'build-process' },
       { module: 'BMM', skill: 'bmad-help', description: 'Guide', action: '' },
     ]);
+  });
+
+  it('includes installed runtime workflows omitted from the user-facing BMAD menu', () => {
+    const rows = includeRuntimeSkills([{ module: 'BMM', skill: 'bmad-build' }], ['bmad-build-auto']);
+    expect(rows.map(row => row.skill)).toEqual(['bmad-build', 'bmad-build-auto']);
+    expect(includeRuntimeSkills(rows, ['bmad-build-auto'])).toHaveLength(2);
   });
 
   it('dispatches different named skills through one runner contract', async () => {

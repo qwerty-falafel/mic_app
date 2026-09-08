@@ -27,6 +27,19 @@ export function csvRows(source: string) {
   return values.map(value => Object.fromEntries(headers.map((header, index) => [header, value[index] ?? ''])));
 }
 
+export function includeRuntimeSkills(rows: Record<string, string>[], available: string[]) {
+  const result = [...rows];
+  for (const skill of available) {
+    if (result.some(row => row.skill === skill)) continue;
+    if (skill === 'bmad-build-auto') result.push({
+      module: 'BMad Method', skill, 'display-name': 'Build Auto', phase: 'implementation', action: '', required: 'false',
+      description: 'Implement and verify one bounded accepted Story without an intermediate Story-spec checkpoint.',
+      outputs: 'implementation + verification evidence', 'preceded-by': 'bmad-spec', 'followed-by': 'bmad-code-review', 'menu-code': '', 'output-location': '', args: '',
+    });
+  }
+  return result;
+}
+
 function tomlValues(source: string) {
   const result: Record<string, string | boolean | number | string[]> = {};
   let section = '';
@@ -70,7 +83,8 @@ export class BmadCatalogService {
     const manifestPath = resolve(installedRoot, '_bmad/_config/manifest.yaml');
     const [catalog, manifest, config] = await Promise.all([readFile(catalogPath, 'utf8'), readFile(manifestPath, 'utf8').catch(() => ''), effectiveConfig(installedRoot, repository.path)]);
     const fingerprint = createHash('sha256').update(catalog).update(manifest).digest('hex');
-    const entries = csvRows(catalog).filter(row => row.skill && row.skill !== '_meta');
+    const runtimeSkills = ['bmad-build-auto'].filter(skill => existsSync(resolve(installedRoot, `.agents/skills/${skill}/SKILL.md`)));
+    const entries = includeRuntimeSkills(csvRows(catalog).filter(row => row.skill && row.skill !== '_meta'), runtimeSkills);
     await this.db.transaction(async tx => {
       await tx.delete(workflowDefinitions).where(eq(workflowDefinitions.repositoryId, repositoryId));
       if (entries.length) await tx.insert(workflowDefinitions).values(entries.map(entry => ({
