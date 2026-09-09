@@ -10,6 +10,17 @@ import type { StoryOutcome } from './story-outcomes.js';
 
 const exec = promisify(execFile);
 
+export function retainTrackedArtifactRefs(refs: unknown, trackedPaths: Iterable<string>) {
+  const tracked = new Set(trackedPaths);
+  return Array.isArray(refs) ? refs.filter((value): value is string => typeof value === 'string' && tracked.has(value)) : [];
+}
+
+export function integrationVerdict(artifacts: Array<{ path: string; metadata: unknown }>, expectedPath?: string) {
+  const retrospective = artifacts.find(artifact => expectedPath ? artifact.path === expectedPath : artifact.path.endsWith('/RETROSPECTIVE.md') || artifact.path === 'RETROSPECTIVE.md');
+  const verdict = (retrospective?.metadata as any)?.frontmatter?.verdict;
+  return { found: Boolean(retrospective), verdict: typeof verdict === 'string' ? verdict : undefined, permitted: ['accepted', 'accepted-with-open-items'].includes(verdict) };
+}
+
 export class StoryDeliveryService {
   constructor(private readonly db: Database) {}
 
@@ -75,7 +86,19 @@ export class StoryDeliveryService {
 
   async update(storyId: string, status: string, evidence: Record<string, unknown>, actor: string) {
     const [current] = await this.db.select().from(storyUnits).where(eq(storyUnits.id, storyId));
-    const [story] = await this.db.update(storyUnits).set({ status, metadata: { ...((current?.metadata as Record<string, unknown>) ?? {}), evidence }, updatedAt: new Date() }).where(eq(storyUnits.id, storyId)).returning();
+    const metadata = (current?.metadata as Record<string, unknown>) ?? {};
+    let artifactRefs = Array.isArray(metadata.artifactRefs) ? metadata.artifactRefs.filter((value): value is string => typeof value === 'string') : [];
+    if (status === 'done' && artifactRefs.length && typeof metadata.sessionId === 'string') {
+      const [session] = await this.db.select().from(workflowSessions).where(eq(workflowSessions.id, metadata.sessionId));
+      const raw = session?.rawState as any;
+      const workspace = raw?.rawAdapterState?.worktree ?? raw?.workspace;
+      if (typeof workspace === 'string') {
+        try {
+          artifactRefs = retainTrackedArtifactRefs(artifactRefs, (await exec('git', ['-C', workspace, 'ls-files'])).stdout.split(/\r?\n/).filter(Boolean));
+        } catch { /* Preserve the recorded references when Git provenance cannot be read. */ }
+      }
+    }
+    const [story] = await this.db.update(storyUnits).set({ status, metadata: { ...metadata, artifactRefs, evidence }, updatedAt: new Date() }).where(eq(storyUnits.id, storyId)).returning();
     if (!story) throw new Error('Story not found');
     await this.db.insert(auditEvents).values({ aggregateType: 'story', aggregateId: storyId, action: `status.${status}`, actor, detail: evidence, idempotencyKey: `${storyId}:${status}:${randomUUID()}` });
     return story;
@@ -93,6 +116,14 @@ export class StoryDeliveryService {
     if (!accepted.length) throw new Error('At least one final artifact revision must be explicitly accepted before integration');
     const retrospective = await this.db.select().from(workflowSessions).where(and(eq(workflowSessions.workstreamId, workstreamId), eq(workflowSessions.skill, 'bmad-retrospective'), eq(workflowSessions.status, 'FINISHED'))).limit(1);
     if (!retrospective.length) throw new Error('A finished BMAD retrospective is required before integration');
+    const [firstStory] = await this.db.select().from(storyUnits).where(eq(storyUnits.workstreamId, workstreamId)).orderBy(asc(storyUnits.order)).limit(1);
+    const [storyInventory] = firstStory?.parentArtifactId ? await this.db.select().from(artifactRevisions).where(eq(artifactRevisions.id, firstStory.parentArtifactId)) : [];
+    if (!storyInventory) throw new Error('Story inventory provenance is required before integration');
+    const expectedRetrospectivePath = `${dirname(storyInventory.path)}/RETROSPECTIVE.md`;
+    const retrospectiveArtifacts = await this.db.select().from(artifactRevisions).where(eq(artifactRevisions.workstreamId, workstreamId)).orderBy(desc(artifactRevisions.createdAt));
+    const retrospectiveDecision = integrationVerdict(retrospectiveArtifacts, expectedRetrospectivePath);
+    if (!retrospectiveDecision.found) throw new Error('An indexed BMAD RETROSPECTIVE.md artifact is required before integration');
+    if (!retrospectiveDecision.permitted) throw new Error(`The BMAD retrospective verdict does not permit integration: ${retrospectiveDecision.verdict ?? 'missing'}`);
     const [stream] = await this.db.select().from(workstreams).where(eq(workstreams.id, workstreamId));
     const [repository] = stream?.repositoryId ? await this.db.select().from(repositories).where(eq(repositories.id, stream.repositoryId)) : [];
     if (!stream?.workspacePath || !stream.baselineRevision || !repository) throw new Error('Workstream Git provenance is unavailable');

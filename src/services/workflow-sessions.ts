@@ -42,7 +42,15 @@ export function reportsExecutionFailure(content: string) {
     /\bi (?:was|am) unable to (?:complete|finish|implement|perform|make|apply)\b/i,
     /\b(?:could not|couldn't|cannot|can't) (?:complete|finish|implement|perform|make|apply)\b/i,
     /\b(?:failed|failure) to (?:complete|finish|implement|perform|make|apply)\b/i,
+    /\b(?:was not|wasn['’]t|am not|is not|isn['’]t) able to (?:locate|find|run|invoke|execute|produce|create|write|save)\b/i,
+    /\b(?:expected|required) (?:runtime|entry point|file|directory|artifact).{0,80}\b(?:missing|not found|unavailable)\b/i,
   ].some(pattern => pattern.test(normalized));
+}
+
+export function claimedArtifactPaths(content: string) {
+  return [...content.matchAll(/(?:`|\b)(_bmad-output\/[A-Za-z0-9_./-]+\.(?:md|ya?ml|json))(?:`|\b)/gi)]
+    .map(match => match[1]!)
+    .filter((path, index, paths) => paths.indexOf(path) === index);
 }
 
 export function preserveControlState(persisted: string | undefined, observed: string) {
@@ -146,6 +154,18 @@ export class WorkflowSessionService {
         result.status = 'failed';
         result.summary = `${session.skill} reported that it could not complete the requested work`;
         result.rawAdapterState = { ...result.rawAdapterState, reportedFailure: parsed.content };
+      }
+      if (result.status === 'done') {
+        const claims = [...new Set([...result.artifactRefs, ...claimedArtifactPaths(parsed.content)])];
+        const missing: string[] = [];
+        for (const path of claims) {
+          try { await access(resolve(workspace, path)); } catch { missing.push(path); }
+        }
+        if (missing.length) {
+          result.status = 'failed';
+          result.summary = `${session.skill} claimed artifacts that do not exist`;
+          result.rawAdapterState = { ...result.rawAdapterState, missingClaimedArtifacts: missing };
+        }
       }
       if (result.status === 'done' && ['bmad-build', 'bmad-build-auto'].includes(session.skill)) {
         const verification = await this.verifyBuild(workspace);

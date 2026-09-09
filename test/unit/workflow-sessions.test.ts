@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awaitsInput, canReviseSession, conversationFromJsonl, needsHumanClassification, nodeVerificationScripts, preserveControlState, reportsExecutionFailure, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
+import { awaitsInput, canReviseSession, claimedArtifactPaths, conversationFromJsonl, needsHumanClassification, nodeVerificationScripts, preserveControlState, reportsExecutionFailure, storyStatusFromSession } from '../../src/services/workflow-sessions.js';
 
 describe('durable workflow conversation contracts', () => {
   it('selects available Node verification commands and rejects malformed package data', () => {
@@ -37,7 +37,15 @@ describe('durable workflow conversation contracts', () => {
   it('recognizes explicit provider failure instead of treating it as completion', () => {
     expect(reportsExecutionFailure('I was unable to complete the requested changes within the given time.')).toBe(true);
     expect(reportsExecutionFailure('I could not finish implementing the requested behavior.')).toBe(true);
+    expect(reportsExecutionFailure("I wasn’t able to locate an executable entry point for the skill.")).toBe(true);
+    expect(reportsExecutionFailure('The expected runtime directory is missing.')).toBe(true);
     expect(reportsExecutionFailure('All requested changes are complete and the checks pass.')).toBe(false);
+  });
+
+  it('extracts unique artifact paths claimed in workflow output', () => {
+    expect(claimedArtifactPaths('Created `_bmad-output/specs/example/RETROSPECTIVE.md`; see _bmad-output/specs/example/RETROSPECTIVE.md.')).toEqual([
+      '_bmad-output/specs/example/RETROSPECTIVE.md',
+    ]);
   });
 
   it('does not ask a human to classify a Build that passed repository verification', () => {
