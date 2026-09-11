@@ -61,6 +61,21 @@ The router loads models on demand. MIC defaults to `llama.cpp/gpt-oss-120b-F16`;
 
 Stop the combined development server with `Ctrl-C`. The next `npm run dev` reuses the same local database.
 
+## Run the production service
+
+Build once after each update, then start the managed launcher. It starts the same persistent project-local PostgreSQL database and MIC listener used in development, without rebuilding files at service start:
+
+```sh
+cd /home/michael/projects/mic_app
+npm ci
+npm run production:build
+npm run serve
+```
+
+Local mode remains the recovery path at <http://127.0.0.1:3100/>. For the protected remote deployment, copy `.env.example` to the host-owned environment location documented in [`../machine_setup/runbooks/secure-remote-mic.md`](../machine_setup/runbooks/secure-remote-mic.md), fill in the Cloudflare Access values, and let the host service load that file. Remote mode refuses to start without an HTTPS public origin, a Cloudflare Access audience, and one exact allowed email address.
+
+The production processes keep PostgreSQL, MIC, the llama.cpp model router, and the Cloudflare tunnel on loopback. The tunnel publishes only MIC. It does not expose ports `54329` or `10000`.
+
 ## Use MIC
 
 1. Open **Products** to resume an enduring Product or create one from its name, purpose, and proposed Product Goal. A repository is optional at this stage.

@@ -14,7 +14,8 @@ export async function startMic(config: MicConfig) {
   const executor = new ProjectExecutionService(db, process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16');
   const app = createApp(db, executor, undefined, { webSecurity: config.webSecurity });
   await app.listen({ host: config.host, port: config.port });
-  console.log(`MIC ready: http://${config.host}:${config.port} (API docs: http://${config.host}:${config.port}/docs/)`);
+  const visibleOrigin = config.webSecurity.mode === 'remote' ? config.webSecurity.publicOrigin : `http://${config.host}:${config.port}`;
+  console.log(`MIC ready: ${visibleOrigin} (local listener: http://${config.host}:${config.port})`);
   let stopping = false;
   return { app, async stop() { if (stopping) return; stopping = true; clearInterval(timer); await app.close(); await runtime.stop(); await pool.end(); } };
 }
