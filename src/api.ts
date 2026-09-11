@@ -16,7 +16,7 @@ import { approvals, artifactRevisions, auditEvents, evidenceRecords, implementat
 import { Kernel } from './kernel.js';
 import { LifecycleService, type LifecycleExecutor } from './services/lifecycle.js';
 import { evaluateGates, type Evidence } from './gates/validator.js';
-import { localMemory } from './services/resource-monitor.js';
+import { localDisk, localMemory } from './services/resource-monitor.js';
 import { BmadCatalogService } from './services/bmad-catalog.js';
 import { WorkstreamService } from './services/workstreams.js';
 import { WorkflowSessionService } from './services/workflow-sessions.js';
@@ -90,7 +90,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
     ]);
     let router: Record<string, unknown> = { status: 'unavailable' };
     try { router = await (await fetch('http://127.0.0.1:10000/health', { signal: AbortSignal.timeout(1000) })).json() as Record<string, unknown>; } catch {}
-    return { status: 'ok', database: 'connected', router, memory, counts: { projects: projectCount.value, workItems: workItemCount.value, activeRuns: activeRuns.value + activeSessions.value, activeWorkflowSessions: activeSessions.value, pendingOutbox: pendingOutbox.value } };
+    return { status: 'ok', database: 'connected', router, memory, deployment: { mode: webSecurity.mode, publicOrigin: webSecurity.mode === 'remote' ? webSecurity.publicOrigin : undefined }, model: { configured: process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16', provider: 'local llama.cpp' }, counts: { projects: projectCount.value, workItems: workItemCount.value, activeRuns: activeRuns.value + activeSessions.value, activeWorkflowSessions: activeSessions.value, pendingOutbox: pendingOutbox.value } };
   });
   app.post('/projects', async (request, reply) => reply.code(201).send(await kernel.createProject(projectInput.parse(request.body), key(request), requestActor(request))));
   app.post('/projects/:id/repositories', async (request, reply) => {
@@ -261,7 +261,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/evidence', async (request, reply) => { const body = z.object({ runId: id, repositoryId: id, kind: z.enum(['BUILD_PASS', 'TESTS_PASS']), revision: id, passed: z.boolean(), data: z.unknown() }).parse(request.body); const [row] = await db.insert(evidenceRecords).values({ id: `evidence_${randomUUID()}`, ...body }).returning(); return reply.code(201).send(row); });
   app.get('/runs/:id/gates', async request => { const { id: runId } = z.object({ id }).parse(request.params); const [run] = await db.select().from(runs).where(eq(runs.id, runId)); if (!run) return null; const records = await db.select().from(evidenceRecords).where(eq(evidenceRecords.runId, runId)); return evaluateGates(run.resultRevision ?? '', records.map(row => ({ kind: row.kind, revision: row.revision, passed: row.passed, data: row.data }) as Evidence)); });
   app.post('/runs/:id/cancel', async (request, reply) => { const { id: runId } = z.object({ id }).parse(request.params); const [run] = await db.select().from(runs).where(eq(runs.id, runId)); if (!run) return reply.code(404).send({ error: 'not_found' }); if (!['RUNNING', 'QUEUED'].includes(run.status)) return reply.code(409).send({ error: 'run_not_active' }); const cancelled = executor?.cancel?.(runId) ?? false; if (!cancelled) return reply.code(409).send({ error: 'active_process_not_found' }); await db.update(runs).set({ status: 'CANCELLED', updatedAt: new Date() }).where(eq(runs.id, runId)); return reply.send({ runId, cancelled }); });
-  app.get('/resources', async () => ({ ...(await localMemory()), thresholds: { minimumAvailableMiB: 200, minimumAvailableFraction: 0.25, swap: 'reported as telemetry' } }));
+  app.get('/resources', async () => ({ ...(await localMemory()), disk: await localDisk(), thresholds: { minimumAvailableMiB: 200, minimumAvailableFraction: 0.25, minimumDiskAvailableGiB: 20, swap: 'reported as telemetry' } }));
   app.get('/scheduler', async () => { const [[pending], [processed], [running], [waiting]] = await Promise.all([db.select({ value: count() }).from(outboxEvents).where(isNull(outboxEvents.deliveredAt)), db.select({ value: count() }).from(processedEvents), db.select({ value: count() }).from(workflowSessions).where(eq(workflowSessions.status, 'RUNNING')), db.select({ value: count() }).from(workflowSessions).where(eq(workflowSessions.status, 'RESOURCE_WAITING'))]); return { pendingOutbox: pending.value, processedEvents: processed.value, workflowSessions: { running: running.value, resourceWaiting: waiting.value }, mode: 'single-model', concurrency: 1 }; });
   const requireLifecycle = () => { if (!lifecycle) throw new Error('Lifecycle executor is not configured'); return lifecycle; };
   app.post('/work-items/:id/discovery', async request => { const { id: entityId } = z.object({ id }).parse(request.params); return requireLifecycle().runDiscovery(entityId, z.record(z.string(), z.unknown()).parse(request.body)); });
