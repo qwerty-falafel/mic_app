@@ -28,11 +28,11 @@ export class Kernel {
     });
   }
 
-  createProject(input: { name: string; purpose?: string; status?: string; definitionOfDone?: string }, key: string = randomUUID()) { return this.create(projects, 'project', key, { ...input, slug: durableSlug(input.name, key) }); }
-  createRepository(input: { projectId: string; path: string; role?: string; baseBranch?: string }, key: string = randomUUID()) { return this.create(repositories, 'repository', key, input); }
-  createWorkItem(input: { projectId: string; title: string; intent: string; kind?: string; state?: string; priority?: number }, key: string = randomUUID()) { return this.create(workItems, 'work_item', key, input); }
-  createRun(input: { workItemId: string; kind: string; model?: string; status?: string; baselineRevision?: string }, key: string = randomUUID()) { return this.create(runs, 'run', key, input); }
-  createQuestion(input: { workItemId: string; runId?: string; question: string; context?: Json; resumeRef?: Json }, key: string = randomUUID()) { return this.create(questions, 'question', key, input); }
+  createProject(input: { name: string; purpose?: string; status?: string; definitionOfDone?: string }, key: string = randomUUID(), actor = 'api') { return this.create(projects, 'project', key, { ...input, slug: durableSlug(input.name, key) }, actor); }
+  createRepository(input: { projectId: string; path: string; role?: string; baseBranch?: string }, key: string = randomUUID(), actor = 'api') { return this.create(repositories, 'repository', key, input, actor); }
+  createWorkItem(input: { projectId: string; title: string; intent: string; kind?: string; state?: string; priority?: number }, key: string = randomUUID(), actor = 'api') { return this.create(workItems, 'work_item', key, input, actor); }
+  createRun(input: { workItemId: string; kind: string; model?: string; status?: string; baselineRevision?: string }, key: string = randomUUID(), actor = 'api') { return this.create(runs, 'run', key, input, actor); }
+  createQuestion(input: { workItemId: string; runId?: string; question: string; context?: Json; resumeRef?: Json }, key: string = randomUUID(), actor = 'api') { return this.create(questions, 'question', key, input, actor); }
 
   async get(kind: 'projects' | 'repositories' | 'work-items' | 'runs' | 'questions', id: string) {
     const table = { projects, repositories, 'work-items': workItems, runs, questions }[kind];

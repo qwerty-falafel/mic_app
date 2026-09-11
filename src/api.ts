@@ -8,6 +8,8 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import type { Database } from './db/client.js';
 import { approvals, artifactRevisions, auditEvents, evidenceRecords, implementationArtifacts, outboxEvents, planningArtifacts, processedEvents, productGoals, projects, questions, repositories, reviewDecisions, runs, workItems, workflowSessions, workstreams } from './db/schema.js';
@@ -28,6 +30,8 @@ import { GptOssProposalAnalyzer, ProductProposalService, type ProductProposalAna
 import { BmadRoutingService } from './services/bmad-routing.js';
 import { runtimeResponsibilities } from './services/runtime-responsibilities.js';
 import { ProductTraceService } from './services/product-trace.js';
+import type { WebSecurityConfig } from './config.js';
+import { installRequestSecurity, requestActor, type AccessVerifier } from './security.js';
 
 const id = z.string().min(1);
 const projectInput = z.object({ name: z.string().trim().min(1), purpose: z.string().trim().optional(), status: z.enum(['active', 'archived']).optional(), definitionOfDone: z.string().trim().min(1).optional() });
@@ -40,9 +44,13 @@ export function isBrowserDocumentRequest(request: { method: string; headers: Rec
   return request.method === 'GET' && String(request.headers.accept ?? '').includes('text/html');
 }
 
-export function createApp(db: Database, executor?: LifecycleExecutor, proposalAnalyzer?: ProductProposalAnalyzer) {
-  const app = Fastify({ logger: false });
-  void app.register(cors, { origin: true });
+export function createApp(db: Database, executor?: LifecycleExecutor, proposalAnalyzer?: ProductProposalAnalyzer, options: { webSecurity?: WebSecurityConfig; accessVerifier?: AccessVerifier } = {}) {
+  const webSecurity = options.webSecurity ?? { mode: 'local', allowedOrigins: ['http://127.0.0.1:3100', 'http://localhost:3100'] };
+  const app = Fastify({ logger: false, trustProxy: webSecurity.mode === 'remote' ? '127.0.0.1' : false, bodyLimit: 2 * 1024 * 1024 });
+  installRequestSecurity(app, webSecurity, options.accessVerifier);
+  void app.register(cors, { origin: webSecurity.allowedOrigins, credentials: webSecurity.mode === 'remote' });
+  void app.register(helmet, { contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'"], objectSrc: ["'none'"], frameAncestors: ["'none'"] } } });
+  void app.register(rateLimit, { global: true, max: webSecurity.mode === 'remote' ? 600 : 10_000, timeWindow: '1 minute', keyGenerator: request => request.micActor || request.ip });
   void app.register(swagger, { mode: 'static', specification: { path: resolve('docs/openapi.json'), baseDir: resolve('docs') } });
   void app.register(swaggerUi, { routePrefix: '/docs' });
   const frontend = resolve('frontend/dist');
@@ -84,21 +92,21 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
     try { router = await (await fetch('http://127.0.0.1:10000/health', { signal: AbortSignal.timeout(1000) })).json() as Record<string, unknown>; } catch {}
     return { status: 'ok', database: 'connected', router, memory, counts: { projects: projectCount.value, workItems: workItemCount.value, activeRuns: activeRuns.value + activeSessions.value, activeWorkflowSessions: activeSessions.value, pendingOutbox: pendingOutbox.value } };
   });
-  app.post('/projects', async (request, reply) => reply.code(201).send(await kernel.createProject(projectInput.parse(request.body), key(request))));
+  app.post('/projects', async (request, reply) => reply.code(201).send(await kernel.createProject(projectInput.parse(request.body), key(request), requestActor(request))));
   app.post('/projects/:id/repositories', async (request, reply) => {
     const { id: projectId } = z.object({ id }).parse(request.params);
-    const repository = await kernel.createRepository({ projectId, ...repositoryInput.parse(request.body) }, key(request));
+    const repository = await kernel.createRepository({ projectId, ...repositoryInput.parse(request.body) }, key(request), requestActor(request));
     await catalog.sync(repository.id);
     return reply.code(201).send(repository);
   });
-  app.post('/work-items', async (request, reply) => reply.code(201).send(await kernel.createWorkItem(workItemInput.parse(request.body), key(request))));
-  app.post('/runs', async (request, reply) => reply.code(201).send(await kernel.createRun(runInput.parse(request.body), key(request))));
-  app.post('/questions', async (request, reply) => reply.code(201).send(await kernel.createQuestion(questionInput.parse(request.body), key(request))));
+  app.post('/work-items', async (request, reply) => reply.code(201).send(await kernel.createWorkItem(workItemInput.parse(request.body), key(request), requestActor(request))));
+  app.post('/runs', async (request, reply) => reply.code(201).send(await kernel.createRun(runInput.parse(request.body), key(request), requestActor(request))));
+  app.post('/questions', async (request, reply) => reply.code(201).send(await kernel.createQuestion(questionInput.parse(request.body), key(request), requestActor(request))));
   app.get('/projects', async () => db.select().from(projects).orderBy(desc(projects.createdAt)));
   app.get('/products', async (request, reply) => isBrowserDocumentRequest(request) && existsSync(frontend) ? reply.sendFile('index.html') : products.portfolio(id => delivery.get(id)));
   app.post('/products', async (request, reply) => {
     const body = projectInput.extend({ productGoal: z.string().trim().min(1).optional() }).parse(request.body);
-    const product = await kernel.createProject(body, key(request));
+    const product = await kernel.createProject(body, key(request), requestActor(request));
     if (body.productGoal) await products.createGoal(product.id, body.productGoal, 'active');
     return reply.code(201).send(await products.getByReference(product.id));
   });
@@ -125,7 +133,7 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/products/:id/definition-of-done', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const { definitionOfDone } = z.object({ definitionOfDone: z.string().trim().min(1) }).parse(request.body); return products.updateDefinitionOfDone(projectId, definitionOfDone); });
   app.patch('/products/:id', async request => { const { id: projectId } = z.object({ id }).parse(request.params); const body = projectInput.partial().parse(request.body); return products.updateProduct(projectId, body); });
   app.get('/products/:id/briefs', async (request, reply) => { if (isBrowserDocumentRequest(request) && existsSync(frontend)) return reply.sendFile('index.html'); const { id: projectId } = z.object({ id }).parse(request.params); const briefs = await proposals.listBriefs(projectId); return Promise.all(briefs.map(async brief => ({ brief, proposals: await proposals.listProposals(brief.id) }))); });
-  app.post('/products/:id/briefs', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ title: z.string().trim().min(1), content: z.string().trim().min(1) }).parse(request.body); return reply.code(201).send(await proposals.createBrief(projectId, body.title, body.content)); });
+  app.post('/products/:id/briefs', async (request, reply) => { const { id: projectId } = z.object({ id }).parse(request.params); const body = z.object({ title: z.string().trim().min(1), content: z.string().trim().min(1) }).parse(request.body); return reply.code(201).send(await proposals.createBrief(projectId, body.title, body.content, requestActor(request))); });
   app.post('/briefs/:id/analyse', async request => { const { id: briefId } = z.object({ id }).parse(request.params); const { feedback } = z.object({ feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.analyse(briefId, feedback); });
   app.post('/product-proposals/:id/decisions', async request => { const { id: proposalId } = z.object({ id }).parse(request.params); const body = z.object({ kind: z.enum(['accepted', 'revision-requested', 'rejected']), actor: z.string().trim().min(1), feedback: z.string().trim().min(1).optional() }).parse(request.body); return proposals.decide(proposalId, body.kind, body.actor, body.feedback); });
   app.get('/product-epics/:id/delivery-recommendation', async request => { const { id: epicId } = z.object({ id }).parse(request.params); const { repositoryId } = z.object({ repositoryId: id.optional() }).parse(request.query); return routing.describeForEpic(epicId, repositoryId); });
@@ -164,14 +172,14 @@ export function createApp(db: Database, executor?: LifecycleExecutor, proposalAn
   app.post('/repositories/:id/bmad/refresh', async request => { const { id: repositoryId } = z.object({ id }).parse(request.params); return catalog.sync(repositoryId); });
   app.get('/repositories/:id/bmad', async request => { const { id: repositoryId } = z.object({ id }).parse(request.params); return catalog.list(repositoryId); });
   app.get('/repositories/:id/bmad/health', async request => { const { id: repositoryId } = z.object({ id }).parse(request.params); return catalog.health(repositoryId); });
-  app.post('/workstreams', async (request, reply) => { const body = z.object({ projectId: id, repositoryId: id.optional(), legacyWorkItemId: id.optional(), title: z.string().min(1), intent: z.string().min(1), path: z.enum(['undecided', 'direct', 'spec-epic', 'project', 'specialist']).default('undecided') }).parse(request.body); return reply.code(201).send(await streams.create(body, key(request))); });
+  app.post('/workstreams', async (request, reply) => { const body = z.object({ projectId: id, repositoryId: id.optional(), legacyWorkItemId: id.optional(), title: z.string().min(1), intent: z.string().min(1), path: z.enum(['undecided', 'direct', 'spec-epic', 'project', 'specialist']).default('undecided') }).parse(request.body); return reply.code(201).send(await streams.create(body, key(request), requestActor(request))); });
   app.get('/workstreams', async request => { const query = z.object({ projectId: id.optional() }).parse(request.query); return streams.list(query.projectId); });
   app.get('/deliveries/:reference', async (request, reply) => { const { reference } = z.object({ reference: id }).parse(request.params); const query = z.object({ projectId: id.optional() }).parse(request.query); const stream = await streams.getByReference(reference, query.projectId); return stream ? delivery.get(stream.id) : reply.code(404).send({ error: 'not_found' }); });
   app.get('/workstreams/:id/lifecycle', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return delivery.get(workstreamId); });
   app.post('/workstreams/:id/actions/:actionId/validate', async request => { const { id: workstreamId, actionId } = z.object({ id, actionId: id }).parse(request.params); const { actionToken } = z.object({ actionToken: id }).parse(request.body); return delivery.validate(workstreamId, actionId, actionToken); });
   app.post('/workstreams/:id/path', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); const body = z.object({ path: z.enum(['direct', 'spec-epic', 'project', 'specialist']), actor: id.optional() }).parse(request.body); return streams.selectPath(workstreamId, body.path, body.actor); });
   app.get('/workstreams/:id/operations', async request => { const { id: workstreamId } = z.object({ id }).parse(request.params); return streams.operations(workstreamId); });
-  app.post('/workflow-sessions', async (request, reply) => { const body = z.object({ workstreamId: id, storyUnitId: id.optional(), skill: id, action: id.optional(), args: z.record(z.string(), z.unknown()).optional(), prompt: z.string().min(1) }).parse(request.body); return reply.code(202).send(await sessions.start(body)); });
+  app.post('/workflow-sessions', async (request, reply) => { const body = z.object({ workstreamId: id, storyUnitId: id.optional(), skill: id, action: id.optional(), args: z.record(z.string(), z.unknown()).optional(), prompt: z.string().min(1) }).parse(request.body); return reply.code(202).send(await sessions.start(body, requestActor(request))); });
   app.get('/workflow-sessions', async request => { const query = z.object({ workstreamId: id.optional() }).parse(request.query); return sessions.list(query.workstreamId); });
   app.get('/workflow-sessions/:id', async (request, reply) => { const { id: sessionId } = z.object({ id }).parse(request.params); const [session] = await db.select().from(workflowSessions).where(eq(workflowSessions.id, sessionId)); return session ? reply.send({ ...session, turns: await sessions.turns(sessionId) }) : reply.code(404).send({ error: 'not_found' }); });
   app.post('/workflow-sessions/:id/respond', async request => { const { id: sessionId } = z.object({ id }).parse(request.params); const body = z.object({ content: z.string().trim().min(1), actor: id.optional() }).parse(request.body); return sessions.respond(sessionId, body.content, body.actor, key(request)); });

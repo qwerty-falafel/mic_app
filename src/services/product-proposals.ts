@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { epicFeatures, features, productBacklogItems, productBriefs, productEpics, productProposals, projects, proposalDecisions } from '../db/schema.js';
+import { auditEvents, epicFeatures, features, productBacklogItems, productBriefs, productEpics, productProposals, projects, proposalDecisions } from '../db/schema.js';
 import { durableSlug } from './slugs.js';
 
 export type ProposalShape = {
@@ -37,7 +37,13 @@ export class ProductProposalService {
   constructor(private readonly db: Database, private readonly analyzer: ProductProposalAnalyzer, private readonly model = process.env.MIC_MODEL ?? 'llama.cpp/gpt-oss-120b-F16') {}
   listBriefs(projectId: string) { return this.db.select().from(productBriefs).where(eq(productBriefs.projectId, projectId)).orderBy(desc(productBriefs.createdAt)); }
   listProposals(briefId: string) { return this.db.select().from(productProposals).where(eq(productProposals.briefId, briefId)).orderBy(desc(productProposals.revision)); }
-  async createBrief(projectId: string, title: string, content: string) { const [row] = await this.db.insert(productBriefs).values({ id: `brief_${randomUUID()}`, projectId, title, content, status: 'draft' }).returning(); return row!; }
+  async createBrief(projectId: string, title: string, content: string, actor = 'api') {
+    return this.db.transaction(async tx => {
+      const [row] = await tx.insert(productBriefs).values({ id: `brief_${randomUUID()}`, projectId, title, content, status: 'draft' }).returning();
+      await tx.insert(auditEvents).values({ aggregateType: 'product_brief', aggregateId: row!.id, action: 'submitted', actor, detail: { projectId, title }, idempotencyKey: `${row!.id}:submitted` });
+      return row!;
+    });
+  }
   async analyse(briefId: string, feedback?: string) {
     const [brief] = await this.db.select().from(productBriefs).where(eq(productBriefs.id, briefId));
     if (!brief) throw new Error('Brief not found');
